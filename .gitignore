@@ -1,0 +1,11 @@
+myres.go
+myres.*
+# 忽略目录bin
+bin/
+Makefile
+config/tools/cfssl
+config/tools/cfssljson
+config/tools/hyperkube1.16.15
+tools/
+.vscode/
+.DS_Sotre
