@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -19,6 +21,23 @@ var log = logging.MustGetLogger("example")
 var format = logging.MustStringFormatter(
 	`%{color}%{time:15:04:05.000} %{shortfunc} > %{level:.4s} %{id:03x}%{color:reset} %{message}`,
 )
+
+// EtcdJSONParse etcd json 解析
+type EtcdJSONParse struct {
+	CN    string   `json:"CN"`
+	Hosts []string `json:"hosts"`
+	Key   struct {
+		Algo string `json:"algo"`
+		Size int    `json:"size"`
+	} `json:"key"`
+	Names []struct {
+		C  string `json:"C"`
+		ST string `json:"ST"`
+		L  string `json:"L"`
+		O  string `json:"O"`
+		OU string `json:"OU"`
+	} `json:"names"`
+}
 
 // ShellToUse 定义shell使用bash
 const ShellToUse = "bash"
@@ -454,6 +473,39 @@ func CreateCert(k8spath string) {
 	}
 }
 
+// InstallEtcd 安装etcd集群
+func InstallEtcd(ip, pwd, k8spath string, ws *sync.WaitGroup) {
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	// create etcd path
+	log.Info("aaaaaa")
+	err = c.Exec("mkdir /etc/etcd/ssl")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("mkdir /opt/kubenetes/bin/")
+	if err != nil {
+		log.Error(err)
+	}
+	// scp etcd to desc host
+	err = c.Upload(k8spath+"tools/etcd/etcd", "/opt/kubenetes/bin/etcd")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Upload(k8spath+"tools/etcd/etcdctl", "/opt/kubenetes/bin/etcd")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Upload(k8spath+"cert/etcd.*", "/etc/etcd/ssl/")
+	if err != nil {
+		log.Info(err)
+	}
+}
+
 /*
 	参数1: 系统配置修改
 	参数2: 服务器ip或者网段
@@ -469,10 +521,11 @@ func main() {
 	para := make(map[string]interface{})
 	// ParaList := []string{"system", "chrony", "kubernetes", "createcert"}
 	confLists := []string{"10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf"}
-	certFileLists := []string{"admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
+	certFileLists := []string{"etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube1.16.15"}
-	toolsFileLists := []string{"cfssl", "cfssljson"}
+	toolsFileLists := []string{"cfssl", "cfssljson", "etcd.tar.gz"}
 	yamlFileLists := []string{"read-group-rbac.yaml"}
+	serviceFileLists := []string{"etcd.service"}
 	k8spath := "/tmp/k8s/"
 	// 获取命令行参数,并检查参数是否存在
 	if len(os.Args) < 2 {
@@ -525,9 +578,16 @@ func main() {
 		}
 		CheckCreateWriteFile(k8spath+"yaml/", file, string(filebytes))
 	}
+	// 将service文件释放到相关目录
+	for _, file := range serviceFileLists {
+		filebytes, err := Asset("config/service/" + file)
+		if err != nil {
+			panic(err)
+		}
+		CheckCreateWriteFile(k8spath+"service/", file, string(filebytes))
+	}
 	//var hostIp string
 	hostIPSplit, hostStartIP, hostStopIP := GetIPDes(para[`ips`].(string))
-	log.Info("hostIPSplit:" + hostIPSplit)
 	wg.Add(hostStopIP - hostStartIP + 1)
 	switch para[`para`] {
 	case `system`:
@@ -553,13 +613,47 @@ func main() {
 	case `createcert`:
 		log.Info(" Start install chrony...")
 		CreateCert(k8spath)
-		// case `etcd`:
-		// 	log.Info(" Start create etcd...")
-		// 	for ; hostStartIP <= hostStopIP; hostStartIP++ {
-		// 		log.Info(hostStartIP)
-		// 		hostStartIPstr := strconv.Itoa(hostStartIP)
-		// 		go InstallChrony(hostIPSplit+hostStartIPstr, para[`pwd`].(string), para[`ntpserver`].(string), &wg)
-		// 	}
-		// 	wg.Wait()
+	case `etcd`:
+		var etcd EtcdJSONParse
+		log.Info("Start Install Etcd....")
+		// unzip etcd.tar.gz
+		shell := "cd " + k8spath + "tools/ && tar -zxf etcd.tar.gz && mv " + k8spath + "tools/etcd-* " + k8spath + "tools/etcd"
+		log.Info("start run " + shell)
+		if !ShellOut(shell) {
+			log.Error("unzip etcd.tar.gz faild!!!")
+		}
+		// load etcd-csr.json
+		jsonFile, _ := os.Open("/tmp/k8s/cert/etcd-csr.json")
+		defer jsonFile.Close()
+		byteValue, err := ioutil.ReadAll(jsonFile)
+		if err != nil {
+			log.Error(err)
+		}
+		json.Unmarshal(byteValue, &etcd)
+		for ; hostStartIP <= hostStopIP; hostStartIP++ {
+			hostStartIPstr := strconv.Itoa(hostStartIP)
+			etcd.Hosts = append(etcd.Hosts, hostIPSplit+hostStartIPstr)
+		}
+		byteValue, _ = json.Marshal(etcd)
+		// wirte json to etcd-csr.json
+		err = ioutil.WriteFile("/tmp/k8s/cert/etcd-csr.json", byteValue, 0644)
+		if err != nil {
+			log.Error(err)
+		}
+		// create etcd cert
+		shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes etcd-csr.json  |  " + k8spath + "tools/cfssljson -bare etcd"
+		log.Info(shell)
+		if !ShellOut(shell) {
+			log.Error("create ETCD cert faild!!!")
+		}
+		// copy etcd to hosts
+		// for ; hostStartIP <= hostStopIP; hostStartIP++ {
+		// 	log.Info(hostStartIP)
+		// 	hostStartIPstr := strconv.Itoa(hostStartIP)
+		// 	log.Info(hostStartIPstr)
+		// 	go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
+		// }
+		wg.Wait()
+		log.Info("ETCD Install Done.")
 	}
 }
