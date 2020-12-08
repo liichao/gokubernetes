@@ -12,3 +12,6 @@
 
 ### 4、创建etcd集群
     go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码
+
+### 未来想法
+    go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210  pwd=密码
