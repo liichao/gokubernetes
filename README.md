@@ -18,6 +18,7 @@
     go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码 handle=remove
 
 描述信息清理etcd集群
+
     # systemctl stop etcd 
     # systemctl disable etcd
     # rm -rf /var/lib/etcd
