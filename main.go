@@ -474,7 +474,7 @@ func CreateCert(k8spath string) {
 }
 
 // InstallEtcd 安装etcd集群
-func InstallEtcd(ip, pwd, k8spath string, ws *sync.WaitGroup) {
+func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) {
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
 	if err != nil {
@@ -482,27 +482,87 @@ func InstallEtcd(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 	}
 	defer c.Close()
 	// create etcd path
-	log.Info("aaaaaa")
-	err = c.Exec("mkdir /etc/etcd/ssl")
-	if err != nil {
-		log.Error(err)
+	if !c.IsExist("/etc/etcd/ssl") {
+		err = c.MkdirAll("/etc/etcd/ssl")
+		if err != nil {
+			log.Error(err)
+		}
 	}
-	err = c.Exec("mkdir /opt/kubenetes/bin/")
-	if err != nil {
-		log.Error(err)
+	if !c.IsExist("/opt/kubernetes/bin/") {
+		err = c.MkdirAll("/opt/kubernetes/bin/")
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	// create etcd data path
+	if !c.IsExist("/var/lib/etcd/") {
+		err = c.MkdirAll("/var/lib/etcd/")
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	// scp etcd to desc host
-	err = c.Upload(k8spath+"tools/etcd/etcd", "/opt/kubenetes/bin/etcd")
+	err = c.Upload(k8spath+"tools/etcd/etcd", "/opt/kubernetes/bin/etcd")
 	if err != nil {
 		log.Info(err)
 	}
-	err = c.Upload(k8spath+"tools/etcd/etcdctl", "/opt/kubenetes/bin/etcd")
+	err = c.Upload(k8spath+"tools/etcd/etcdctl", "/opt/kubernetes/bin/etcdctl")
 	if err != nil {
 		log.Info(err)
 	}
-	err = c.Upload(k8spath+"cert/etcd.*", "/etc/etcd/ssl/")
+	// scp cert to desc host
+	err = c.Upload(k8spath+"cert/etcd.pem", "/etc/etcd/ssl/")
 	if err != nil {
 		log.Info(err)
+	}
+	err = c.Upload(k8spath+"cert/etcd-key.pem", "/etc/etcd/ssl/")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Upload(k8spath+"cert/ca.pem", "/etc/etcd/ssl/")
+	if err != nil {
+		log.Info(err)
+	}
+	// chmod bin
+	err = c.Exec("chmod 755 /opt/kubernetes/bin/*")
+	if err != nil {
+		log.Error(err)
+	}
+	// scp etcd.service to desc hosts
+	err = c.Upload(k8spath+"service/etcd.service", "/etc/systemd/system/")
+	if err != nil {
+		log.Info(err)
+	}
+	// modify the etcd.service config file
+	log.Info(etcdID)
+	err = c.Exec("sed -i 's/NODE_NAME/etcd" + etcdID + "/g' /etc/systemd/system/etcd.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /etc/systemd/system/etcd.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's%ETCD_NODES%" + etcdnode + "%g' /etc/systemd/system/etcd.service")
+	if err != nil {
+		log.Error(err)
+	}
+	// config etcd service enable
+	err = c.Exec("systemctl enable etcd")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl daemon-reload")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl restart etcd")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl status etcd.service")
+	if err != nil {
+		log.Error(err)
 	}
 }
 
@@ -588,7 +648,9 @@ func main() {
 	}
 	//var hostIp string
 	hostIPSplit, hostStartIP, hostStopIP := GetIPDes(para[`ips`].(string))
-	wg.Add(hostStopIP - hostStartIP + 1)
+	// start theard
+	threadNum := hostStopIP - hostStartIP + 1
+	wg.Add(threadNum)
 	switch para[`para`] {
 	case `system`:
 		log.Info(" Start config system parameters...")
@@ -653,6 +715,20 @@ func main() {
 		// 	log.Info(hostStartIPstr)
 		// 	go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
 		// }
+		// wg.Wait()
+		var etcdnode string
+		for i := 0; i <= threadNum-1; i++ {
+			hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
+			etcdID := strconv.Itoa(i + 1)
+			etcdnode = "etcd" + etcdID + "=https://" + hostIPSplit + hostStartIPstr + ":2380," + etcdnode
+		}
+		etcdnode = etcdnode[0 : len(etcdnode)-1]
+		for i := 0; i <= threadNum-1; i++ {
+			hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
+			etcdID := strconv.Itoa(i + 1)
+			log.Info("etcdID:" + etcdID)
+			go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, etcdID, etcdnode, &wg)
+		}
 		wg.Wait()
 		log.Info("ETCD Install Done.")
 	}
