@@ -566,6 +566,46 @@ func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) 
 	}
 }
 
+// RemoveEtcd 删除etcd集群
+func RemoveEtcd(ip, pwd string, ws *sync.WaitGroup) {
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	log.Info("Disable startup etcd service.")
+	err = c.Exec("systemctl disable etcd")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("Stop etcd service.")
+	err = c.Exec("systemctl stop etcd")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("delete /var/lib/etcd")
+	err = c.Exec("rm -rf /var/lib/etcd")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("delete /etc/etcd/")
+	err = c.Exec("rm -rf /etc/etcd/")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("delete /etc/systemd/system/etcd.service")
+	err = c.Exec("rm -rf /etc/systemd/system/etcd.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl daemon-reload")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("Remove Etcd Service Done.")
+}
+
 /*
 	参数1: 系统配置修改
 	参数2: 服务器ip或者网段
@@ -716,20 +756,30 @@ func main() {
 		// 	go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
 		// }
 		// wg.Wait()
-		var etcdnode string
-		for i := 0; i <= threadNum-1; i++ {
-			hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
-			etcdID := strconv.Itoa(i + 1)
-			etcdnode = "etcd" + etcdID + "=https://" + hostIPSplit + hostStartIPstr + ":2380," + etcdnode
+		if para[`handle`].(string) == "uninstall" {
+			for i := 0; i <= threadNum-1; i++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
+				go RemoveEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), &wg)
+			}
+			wg.Wait()
+			log.Info("ETCD uninstall Done.")
 		}
-		etcdnode = etcdnode[0 : len(etcdnode)-1]
-		for i := 0; i <= threadNum-1; i++ {
-			hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
-			etcdID := strconv.Itoa(i + 1)
-			log.Info("etcdID:" + etcdID)
-			go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, etcdID, etcdnode, &wg)
+		if para[`handle`].(string) == "install" {
+			var etcdnode string
+			for i := 0; i <= threadNum-1; i++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
+				etcdID := strconv.Itoa(i + 1)
+				etcdnode = "etcd" + etcdID + "=https://" + hostIPSplit + hostStartIPstr + ":2380," + etcdnode
+			}
+			etcdnode = etcdnode[0 : len(etcdnode)-1]
+			for i := 0; i <= threadNum-1; i++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
+				etcdID := strconv.Itoa(i + 1)
+				log.Info("etcdID:" + etcdID)
+				go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, etcdID, etcdnode, &wg)
+			}
+			wg.Wait()
+			log.Info("ETCD Install Done.")
 		}
-		wg.Wait()
-		log.Info("ETCD Install Done.")
 	}
 }

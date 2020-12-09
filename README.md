@@ -12,10 +12,10 @@
 
 ### 4、创建etcd集群
 #### 安装
-    go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码
+    go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码 handle=install
 
 #### 清理（未完成）
-    go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码 handle=remove
+    go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码 handle=uninstall
 
 描述信息清理etcd集群
 
