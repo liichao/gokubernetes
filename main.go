@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/op/go-logging"
 	"github.com/pytool/ssh"
@@ -41,6 +42,18 @@ type EtcdJSONParse struct {
 
 // ShellToUse 定义shell使用bash
 const ShellToUse = "bash"
+
+// Exists 判断所给路径文件/文件夹是否存在
+func Exists(path string) bool {
+	_, err := os.Stat(path) //os.Stat获取文件信息
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
 
 // ShellOut 执行命令并返回结果
 func ShellOut(command string) bool {
@@ -307,9 +320,14 @@ func InstallChrony(ip, pwd, ntpserver string, ws *sync.WaitGroup) {
 	}
 	// 当命令执行完成后关闭
 	defer c.Close()
-	// 卸载ntp 并安装 chrony
+	// remote ntp and install chrony
 	log.Info(ip + " remove ntp server and install chrony")
 	err = c.Exec("yum remove -y ntp && yum install -y chrony")
+	if err != nil {
+		log.Error(err)
+	}
+	// change localtime to Shanghai
+	err = c.Exec("cp -f /usr/share/zoneinfo/Asia/Shanghai /etc/localtime")
 	if err != nil {
 		log.Error(err)
 	}
@@ -606,6 +624,125 @@ func RemoveEtcd(ip, pwd string, ws *sync.WaitGroup) {
 	log.Info("Remove Etcd Service Done.")
 }
 
+// InstallDocker 安装docker
+func InstallDocker(ip, pwd, k8spath string, ws *sync.WaitGroup) {
+	log.Info(ip + pwd)
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	// create etcd data path
+	if !c.IsExist("/etc/docker") {
+		err = c.MkdirAll("/etc/docker")
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	err = c.Upload(k8spath+"daemon.json", "/etc/docker/")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Upload(k8spath+"docker", "/etc/bash_completion.d/docker")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Exec("chmod 0644 /etc/bash_completion.d/docker")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("rm -rf /opt/kubernetes/bin/docker")
+	if err != nil {
+		log.Error(err)
+	}
+	// Transfer docker files to /opt/kubernetes/bin/docker/
+	log.Info(ip + ":" + k8spath + "tools/docker to " + "/opt/kubernetes/bin/")
+	err = c.UploadDir(k8spath+"tools/docker", "/opt/kubernetes/bin/")
+	if err != nil {
+		log.Info(err)
+	}
+	// chmod bin
+	err = c.Exec("chmod 755 /opt/kubernetes/bin/docker/*")
+	if err != nil {
+		log.Error(err)
+	}
+	// flush-iptables
+	err = c.Exec("iptables -P INPUT ACCEPT && iptables -F && iptables -X && iptables -F -t nat && iptables -X -t nat && iptables -F -t raw && iptables -X -t raw && iptables -F -t mangle && iptables -X -t mangle")
+	if err != nil {
+		log.Error(err)
+	}
+	// ln -s /opt/kubernetes/bin/docker/docker /usr/bin/docker
+	err = c.Exec("ln -s /opt/kubernetes/bin/docker/docker /usr/bin/docker")
+	if err != nil {
+		log.Error(err)
+	}
+	// Transfer docker.service  files to /etc/systemd/system/docker.service
+	err = c.Upload(k8spath+"service/docker.service", "/etc/systemd/system/docker.service")
+	if err != nil {
+		log.Info(err)
+	}
+	// config docker service enable
+	err = c.Exec("systemctl enable docker")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl daemon-reload")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl restart docker")
+	if err != nil {
+		log.Error(err)
+	}
+	// sleep 1 second
+	time.Sleep(1000000000)
+	err = c.Exec("systemctl status docker.service")
+	if err != nil {
+		log.Error(err)
+	}
+}
+
+// RemoveDocker 删除etcd集群
+func RemoveDocker(ip, pwd string, ws *sync.WaitGroup) {
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	log.Info("Disable startup docker service.")
+	err = c.Exec("systemctl disable docker")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("Stop docker service.")
+	err = c.Exec("systemctl stop docker")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("delete /var/lib/docker")
+	err = c.Exec("rm -rf /var/lib/docker")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("delete /etc/docker/")
+	err = c.Exec("rm -rf /etc/docker/")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("delete /etc/systemd/system/docker.service")
+	err = c.Exec("rm -rf /etc/systemd/system/docker.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl daemon-reload")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("Remove docker Service Done.")
+}
+
 /*
 	参数1: 系统配置修改
 	参数2: 服务器ip或者网段
@@ -620,12 +757,12 @@ func main() {
 	var wg sync.WaitGroup
 	para := make(map[string]interface{})
 	// ParaList := []string{"system", "chrony", "kubernetes", "createcert"}
-	confLists := []string{"10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf"}
+	confLists := []string{"10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
 	certFileLists := []string{"etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube1.16.15"}
 	toolsFileLists := []string{"cfssl", "cfssljson", "etcd.tar.gz"}
 	yamlFileLists := []string{"read-group-rbac.yaml"}
-	serviceFileLists := []string{"etcd.service"}
+	serviceFileLists := []string{"etcd.service", "docker.service"}
 	k8spath := "/tmp/k8s/"
 	// 获取命令行参数,并检查参数是否存在
 	if len(os.Args) < 2 {
@@ -713,7 +850,7 @@ func main() {
 		wg.Wait()
 		log.Info("all chrony server config done.")
 	case `createcert`:
-		log.Info(" Start install chrony...")
+		log.Info(" Start install createcert...")
 		CreateCert(k8spath)
 	case `etcd`:
 		var etcd EtcdJSONParse
@@ -748,14 +885,7 @@ func main() {
 		if !ShellOut(shell) {
 			log.Error("create ETCD cert faild!!!")
 		}
-		// copy etcd to hosts
-		// for ; hostStartIP <= hostStopIP; hostStartIP++ {
-		// 	log.Info(hostStartIP)
-		// 	hostStartIPstr := strconv.Itoa(hostStartIP)
-		// 	log.Info(hostStartIPstr)
-		// 	go InstallEtcd(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
-		// }
-		// wg.Wait()
+		// uninstall etcd
 		if para[`handle`].(string) == "uninstall" {
 			for i := 0; i <= threadNum-1; i++ {
 				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
@@ -764,6 +894,7 @@ func main() {
 			wg.Wait()
 			log.Info("ETCD uninstall Done.")
 		}
+		// install etcd
 		if para[`handle`].(string) == "install" {
 			var etcdnode string
 			for i := 0; i <= threadNum-1; i++ {
@@ -780,6 +911,40 @@ func main() {
 			}
 			wg.Wait()
 			log.Info("ETCD Install Done.")
+			log.Info("Please Run `/opt/kubernetes/bin/etcdctl --endpoints=https://IP:2379  --cacert=/etc/etcd/ssl/ca.pem  --cert=/etc/etcd/ssl/etcd.pem  --key=/etc/etcd/ssl/etcd-key.pem  endpoint health` check etcd health status.")
+		}
+	case `docker`:
+		log.Info(" Start install docker...")
+		// check docker.tgz Exists
+		if !Exists("/tmp/k8s/tools/docker-" + para[`version`].(string) + ".tgz") {
+			log.Info("docker.tgz is No exists. please download to /tmp/k8s/tools/")
+			log.Info("docker.tgz download url : https://download.docker.com/linux/static/stable/x86_64/docker-" + para[`version`].(string) + ".tgz")
+		}
+		// install docker
+		if para[`handle`].(string) == "install" {
+			shell := "cd " + k8spath + "tools/ && tar zxvf docker-" + para[`version`].(string) + ".tgz"
+			log.Info("start run " + shell)
+			if !ShellOut(shell) {
+				log.Error("unzip docker-" + para[`version`].(string) + ".tgz faild!!!")
+			}
+			// handle ssh host
+			for ; hostStartIP <= hostStopIP; hostStartIP++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP)
+				log.Info(hostIPSplit + hostStartIPstr)
+				go InstallDocker(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
+			}
+			wg.Wait()
+			log.Info("Install docker Done.")
+		}
+		// uninstall docker
+		if para[`handle`].(string) == "uninstall" {
+			for ; hostStartIP <= hostStopIP; hostStartIP++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP)
+				log.Info(hostIPSplit + hostStartIPstr)
+				go RemoveDocker(hostIPSplit+hostStartIPstr, para[`pwd`].(string), &wg)
+			}
+			wg.Wait()
+			log.Info("Docker uninstall Done.")
 		}
 	}
 }

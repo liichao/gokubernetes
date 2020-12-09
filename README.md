@@ -2,19 +2,19 @@
 用golang编写一个 一键部署k8s集群
 
 ### 1、安装时钟同步服务器
-    go-install-kubernetes para=chrony ips=10.10.77.202-204 pwd=密码 ntpserver=ntpserver
+    go-install-kubernetes para=chrony ips=10.10.77.202-204 pwd=密码 ntpserver=ntp.aliyun.com
 
 ### 2、配置系统参数
     go-install-kubernetes para=system ips=10.10.77.202-204 pwd=密码 proxymode=ipvs
 
-### 3、创建相关证书
+### 3、创建相关证书(k8s、etcd)
     go-install-kubernetes para=createcert ips=10.10.77.202-204 pwd=密码
 
 ### 4、创建etcd集群
 #### 安装
     go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码 handle=install
 
-#### 清理（未完成）
+#### 清理
     go-install-kubernetes para=etcd ips=10.10.77.202-204 pwd=密码 handle=uninstall
 
 描述信息清理etcd集群
@@ -26,7 +26,7 @@
     # rm -rf /etc/systemd/system/etcd.service
 
 ### 5、安装docker（未完成）
-    go-install-kubernetes para=docker ips=10.10.77.202-204 pwd=密码 harbor=url
+    go-install-kubernetes para=docker ips=10.10.77.202-204 pwd=密码 harbor=url version=18.09.6
 - 完成后规划
 将docker更换container
 
