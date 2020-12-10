@@ -49,6 +49,8 @@
 将cfssl和cfssljson拷贝到相关机器上并执行创建证书
 note: 还未替换相关apiserver地址  config kube-controller-manager.kubeconfig kube-scheduler.kubeconfig
 note: 将所有二进制文件一起拷贝过去
+
+
 ### 未来想法（未完成）
     go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs
 当proxymode不为ipvs为不启用ipvs
