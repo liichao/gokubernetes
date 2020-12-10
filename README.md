@@ -44,7 +44,7 @@
 - 完成后规划（待完成）
 将docker更换container
 
-### 6、apiserver scheduler controller-manager
+### 6、apiserver scheduler controller-manager （未完成）
     go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcip=10.249.0.0/16 clusterip=172.235.0.0/16 handle=install 
 
 将cfssl和cfssljson拷贝到相关机器上并执行创建证书
@@ -57,3 +57,6 @@ clusterip  cluster_ip  容器ip，不能与主机网络重合
 ### 未来想法（未完成）
     go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs
 当proxymode不为ipvs为不启用ipvs
+
+后期添加一个配置文件
+所有的参数均放到配置文件中
