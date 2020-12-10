@@ -5,7 +5,9 @@ bin/
 Makefile
 config/tools/cfssl
 config/tools/cfssljson
-config/tools/hyperkube1.16.15
-tools/
+config/tools/hyperkube
+config/tools/etcd.tar.gz
+config/tools/docker-18.09.6.tgz
+# tools/
 .vscode/
 .DS_Sotre
