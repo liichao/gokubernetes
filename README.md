@@ -1,5 +1,5 @@
 # gokubernetes
-用golang编写一个 一键部署k8s集群
+用golang编写一个 一键部署k8s集群，并用来学习golang
 
 ### 1、安装时钟同步服务器
     go-install-kubernetes para=chrony ips=10.10.77.202-204 pwd=密码 ntpserver=ntp.aliyun.com
@@ -46,10 +46,13 @@
 
 ### 6、apiserver scheduler controller-manager
     go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcip=10.249.0.0/16 clusterip=172.235.0.0/16 handle=install 
+
 将cfssl和cfssljson拷贝到相关机器上并执行创建证书
 note: 还未替换相关apiserver地址  config kube-controller-manager.kubeconfig kube-scheduler.kubeconfig
 note: 将所有二进制文件一起拷贝过去
 
+svcip service_ip 不能与主机网络重合
+clusterip  cluster_ip  容器ip，不能与主机网络重合
 
 ### 未来想法（未完成）
     go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs

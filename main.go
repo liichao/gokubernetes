@@ -264,11 +264,6 @@ func main() {
 		}
 	case `k8s`:
 		log.Info(" 开始安装k8smaster三大组件...")
-		// 		# K8S Service CIDR, not overlap with node(host) networking
-		// SERVICE_CIDR="10.249.0.0/16"
-
-		// # Cluster CIDR (Pod CIDR), not overlap with node(host) networking
-		// CLUSTER_CIDR="172.235.0.0/16"
 		if para[`handle`].(string) == "install" {
 			for i := 0; i <= threadNum-1; i++ {
 				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
