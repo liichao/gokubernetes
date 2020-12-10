@@ -25,11 +25,30 @@
     # rm -rf /etc/etcd/
     # rm -rf /etc/systemd/system/etcd.service
 
-### 5、安装docker（未完成）
-    go-install-kubernetes para=docker ips=10.10.77.202-204 pwd=密码 harbor=url version=18.09.6
-- 完成后规划
+### 5、docker
+#### 安装
+    go-install-kubernetes para=docker ips=10.10.77.202-204 pwd=密码 version=18.09.6 handle=install
+
+#### 卸载
+    go-install-kubernetes para=docker ips=10.10.77.202-204 pwd=密码 version=18.09.6 handle=uninstall
+
+描述信息清理docker
+
+    # systemctl stop docker 
+    # systemctl disable docker
+    # rm -rf /var/lib/docker
+    # rm -rf /etc/docker/
+    # rm -rf /etc/systemd/system/docker.service
+    # rm -rf /usr/bin/docker
+
+- 完成后规划（待完成）
 将docker更换container
 
+### 6、apiserver scheduler controller-manager
+    go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcip=10.249.0.0/16 clusterip=172.235.0.0/16 handle=install 
+将cfssl和cfssljson拷贝到相关机器上并执行创建证书
+note: 还未替换相关apiserver地址  config kube-controller-manager.kubeconfig kube-scheduler.kubeconfig
+note: 将所有二进制文件一起拷贝过去
 ### 未来想法（未完成）
     go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs
 当proxymode不为ipvs为不启用ipvs

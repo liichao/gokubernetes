@@ -326,7 +326,7 @@ func InstallChrony(ip, pwd, ntpserver string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Error(err)
 	}
-	// change localtime to Shanghai
+	// 更改时区为上海时区
 	err = c.Exec("cp -f /usr/share/zoneinfo/Asia/Shanghai /etc/localtime")
 	if err != nil {
 		log.Error(err)
@@ -381,7 +381,7 @@ func CreateCert(k8spath string) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 删除原有kubeconfig
-	shell = "rm -rf /root/.kube/config"
+	shell = "rm -rf /root/.kube"
 	log.Info("start run " + shell)
 	if !ShellOut(shell) {
 		log.Error("del faild or config file not exist!!!")
@@ -418,12 +418,12 @@ func CreateCert(k8spath string) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置集群参数kube-scheduler
-	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + "--kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
+	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
 	if !ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置认证参数kube-scheduler
-	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-credentials system:kube-scheduler --client-certificate=" + k8spath + "cert/kube-scheduler.pem --client-key=" + k8spath + "cert/kube-scheduler-key.pem --embed-certs=true --server=" + kubeAPIServer + "--kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
+	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-credentials system:kube-scheduler --client-certificate=" + k8spath + "cert/kube-scheduler.pem --client-key=" + k8spath + "cert/kube-scheduler-key.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
 	if !ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
@@ -444,7 +444,7 @@ func CreateCert(k8spath string) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置集群参数kube-proxy
-	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + "--kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
+	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
 	if !ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
@@ -463,14 +463,13 @@ func CreateCert(k8spath string) {
 	if !ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
-
 	// 创建 kube-controller-manager证书与私钥
 	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-controller-manager-csr.json | " + k8spath + "tools/cfssljson -bare kube-controller-manager"
 	if !ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置集群参数kube-controller-manager
-	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + "--kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
+	shell = k8spath + "tools/hyperkube1.16.15 kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
 	if !ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
@@ -499,7 +498,7 @@ func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) 
 		panic(err)
 	}
 	defer c.Close()
-	// create etcd path
+	// 检查并创建ssl目录
 	if !c.IsExist("/etc/etcd/ssl") {
 		err = c.MkdirAll("/etc/etcd/ssl")
 		if err != nil {
@@ -512,14 +511,14 @@ func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) 
 			log.Error(err)
 		}
 	}
-	// create etcd data path
+	// 检查并创建etcd目录
 	if !c.IsExist("/var/lib/etcd/") {
 		err = c.MkdirAll("/var/lib/etcd/")
 		if err != nil {
 			log.Error(err)
 		}
 	}
-	// scp etcd to desc host
+	// 拷贝etcd二进制文件到 相关目录
 	err = c.Upload(k8spath+"tools/etcd/etcd", "/opt/kubernetes/bin/etcd")
 	if err != nil {
 		log.Info(err)
@@ -528,7 +527,7 @@ func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) 
 	if err != nil {
 		log.Info(err)
 	}
-	// scp cert to desc host
+	// 拷贝证书到相关目录
 	err = c.Upload(k8spath+"cert/etcd.pem", "/etc/etcd/ssl/")
 	if err != nil {
 		log.Info(err)
@@ -541,17 +540,17 @@ func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) 
 	if err != nil {
 		log.Info(err)
 	}
-	// chmod bin
+	// 给所有二进制文件授权
 	err = c.Exec("chmod 755 /opt/kubernetes/bin/*")
 	if err != nil {
 		log.Error(err)
 	}
-	// scp etcd.service to desc hosts
+	// 拷贝etcd.service 启动文件到目录
 	err = c.Upload(k8spath+"service/etcd.service", "/etc/systemd/system/")
 	if err != nil {
 		log.Info(err)
 	}
-	// modify the etcd.service config file
+	// 修改etcd启动文件
 	log.Info(etcdID)
 	err = c.Exec("sed -i 's/NODE_NAME/etcd" + etcdID + "/g' /etc/systemd/system/etcd.service")
 	if err != nil {
@@ -565,7 +564,7 @@ func InstallEtcd(ip, pwd, k8spath, etcdID, etcdnode string, ws *sync.WaitGroup) 
 	if err != nil {
 		log.Error(err)
 	}
-	// config etcd service enable
+	// 配置etcd开机启动并启动
 	err = c.Exec("systemctl enable etcd")
 	if err != nil {
 		log.Error(err)
@@ -633,7 +632,7 @@ func InstallDocker(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 		panic(err)
 	}
 	defer c.Close()
-	// create etcd data path
+	// 检查并创建目录
 	if !c.IsExist("/etc/docker") {
 		err = c.MkdirAll("/etc/docker")
 		if err != nil {
@@ -656,33 +655,33 @@ func InstallDocker(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Error(err)
 	}
-	// Transfer docker files to /opt/kubernetes/bin/docker/
+	// 传输docker相关文件到 /opt/kubernetes/bin/docker/目录下
 	log.Info(ip + ":" + k8spath + "tools/docker to " + "/opt/kubernetes/bin/")
 	err = c.UploadDir(k8spath+"tools/docker", "/opt/kubernetes/bin/")
 	if err != nil {
 		log.Info(err)
 	}
-	// chmod bin
+	// 赋权
 	err = c.Exec("chmod 755 /opt/kubernetes/bin/docker/*")
 	if err != nil {
 		log.Error(err)
 	}
-	// flush-iptables
+	// flush-iptables 清空iptables
 	err = c.Exec("iptables -P INPUT ACCEPT && iptables -F && iptables -X && iptables -F -t nat && iptables -X -t nat && iptables -F -t raw && iptables -X -t raw && iptables -F -t mangle && iptables -X -t mangle")
 	if err != nil {
 		log.Error(err)
 	}
-	// ln -s /opt/kubernetes/bin/docker/docker /usr/bin/docker
+	// ln -s /opt/kubernetes/bin/docker/docker /usr/bin/docker 创建软连接
 	err = c.Exec("ln -s /opt/kubernetes/bin/docker/docker /usr/bin/docker")
 	if err != nil {
 		log.Error(err)
 	}
-	// Transfer docker.service  files to /etc/systemd/system/docker.service
+	// 传输 docker启动文件到 /etc/systemd/system/docker.service
 	err = c.Upload(k8spath+"service/docker.service", "/etc/systemd/system/docker.service")
 	if err != nil {
 		log.Info(err)
 	}
-	// config docker service enable
+	// 配置docker开机启动与启动
 	err = c.Exec("systemctl enable docker")
 	if err != nil {
 		log.Error(err)
@@ -695,7 +694,7 @@ func InstallDocker(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Error(err)
 	}
-	// sleep 1 second
+	// 延迟一秒
 	time.Sleep(1000000000)
 	err = c.Exec("systemctl status docker.service")
 	if err != nil {
@@ -740,7 +739,87 @@ func RemoveDocker(ip, pwd string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Error(err)
 	}
+	err = c.Exec("rm -rf /usr/bin/docker")
+	if err != nil {
+		log.Error(err)
+	}
 	log.Info("Remove docker Service Done.")
+}
+
+// InstallK8sMaster 安装k8s master
+func InstallK8sMaster(ip, pwd, k8spath string, ws *sync.WaitGroup) {
+	log.Info(ip + pwd)
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	if !c.IsExist("/opt/kubenetes/cfg/") {
+		err = c.MkdirAll("/opt/kubenetes/cfg/")
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	if !c.IsExist("/root/.kube/") {
+		err = c.MkdirAll("/root/.kube/")
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	// 拷贝 hyperkube 到主机
+	err = c.Upload(k8spath+"tools/hyperkube1.16.15", "/opt/kubernetes/bin/hyperkube")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Upload(k8spath+"tools/cfssl", "/opt/kubernetes/bin/cfssl")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Upload(k8spath+"tools/cfssl", "/opt/kubernetes/bin/cfssl")
+	if err != nil {
+		log.Info(err)
+	}
+	shell := "chmod 0755 /opt/kubernetes/bin/*"
+	log.Info(shell)
+	if !ShellOut(shell) {
+		log.Error(ip + "chmod 0755 /opt/kubernetes/bin/* 失败!!!")
+	}
+	// 分发config 可以不分发
+	err = c.Upload("/root/.kube/config", "/root/.kube/config")
+	if err != nil {
+		log.Info(err)
+	}
+	// 分发证书和config
+	// basic-auth.csv apiserver 基础认证（用户名/密码）配置
+	certList := []string{"basic-auth.csv", "admin.pem", "admin-key.pem", "ca.pem", "ca-key.pem", "ca-config.json", "kube-proxy.kubeconfig", "kube-controller-manager.kubeconfig", "kube-scheduler.kubeconfig"}
+	for _, file := range certList {
+		err = c.Upload(k8spath+"cert/"+file, "/opt/kubenetes/cfg/"+file)
+		if err != nil {
+			log.Info(err)
+		}
+	}
+	// 修改config配置
+	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /opt/kubenetes/cfg/kubernetes-csr.json")
+	if err != nil {
+		log.Error(err)
+	}
+	// 创建 kubernetes 证书和私钥
+	shell = "cd /opt/kubenetes/cfg/ && /opt/kubenetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json |  /opt/kubenetes/bin/cfssljson -bare kubernetes"
+	log.Info(shell)
+	if !ShellOut(shell) {
+		log.Error(" 创建 kubernetes 证书和私钥失败!!!")
+	}
+	// 创建 aggregator proxy证书签名请求
+	shell = "cd /opt/kubenetes/cfg/ && /opt/kubenetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes aggregator-proxy-csr.json |  /opt/kubenetes/bin/cfssljson -bare aggregator-proxy"
+	log.Info(shell)
+	if !ShellOut(shell) {
+		log.Error(" aggregator proxy证书签名请求失败!!!")
+	}
+	// err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /etc/systemd/system/etcd.service")
+	// if err != nil {
+	// 	log.Error(err)
+	// }
 }
 
 /*
@@ -758,11 +837,11 @@ func main() {
 	para := make(map[string]interface{})
 	// ParaList := []string{"system", "chrony", "kubernetes", "createcert"}
 	confLists := []string{"10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
-	certFileLists := []string{"etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
+	certFileLists := []string{"kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube1.16.15"}
 	toolsFileLists := []string{"cfssl", "cfssljson", "etcd.tar.gz"}
-	yamlFileLists := []string{"read-group-rbac.yaml"}
-	serviceFileLists := []string{"etcd.service", "docker.service"}
+	yamlFileLists := []string{"read-group-rbac.yaml", "basic-auth-rbac.yaml"}
+	serviceFileLists := []string{"kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
 	k8spath := "/tmp/k8s/"
 	// 获取命令行参数,并检查参数是否存在
 	if len(os.Args) < 2 {
@@ -945,6 +1024,21 @@ func main() {
 			}
 			wg.Wait()
 			log.Info("Docker uninstall Done.")
+		}
+	case `k8s`:
+		log.Info(" Start install k8s api...")
+		// 		# K8S Service CIDR, not overlap with node(host) networking
+		// SERVICE_CIDR="10.249.0.0/16"
+
+		// # Cluster CIDR (Pod CIDR), not overlap with node(host) networking
+		// CLUSTER_CIDR="172.235.0.0/16"
+		if para[`handle`].(string) == "install" {
+			for i := 0; i <= threadNum-1; i++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
+				go InstallK8sMaster(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
+			}
+			wg.Wait()
+			log.Info("k8s install Done.")
 		}
 	}
 }

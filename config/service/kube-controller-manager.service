@@ -1,0 +1,25 @@
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+
+[Service]
+ExecStart=/opt/kubernetes/bin/hyperkube kube-controller-manager \
+  --address=127.0.0.1 \
+  --allocate-node-cidrs=true \
+  --cluster-cidr=CLUSTER_CIDR \
+  --cluster-name=kubernetes \
+  --cluster-signing-cert-file=/opt/kubernetes/cfg/ca.pem \
+  --cluster-signing-key-file=/opt/kubernetes/cfg/ca-key.pem \
+  --kubeconfig=/opt/kubernetes/cfg/kube-controller-manager.kubeconfig \
+  --leader-elect=true \
+  --node-cidr-mask-size=NODE_CIDR_LEN \
+  --root-ca-file=/opt/kubernetes/cfg/ca.pem \
+  --service-account-private-key-file=/opt/kubernetes/cfg/ca-key.pem \
+  --service-cluster-ip-range=SERVICE_CIDR \
+  --use-service-account-credentials=true \
+  --v=2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
