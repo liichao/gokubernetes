@@ -1,6 +1,10 @@
 package tools
 
 import (
+	"bufio"
+	"bytes"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -36,4 +40,73 @@ func GetIPDes(ips string) (string, int, int) {
 		log.Info(err)
 	}
 	return result, hostStartIP, hostStopIP
+}
+
+// CheckCreateWriteFile 检查文件并创建，在写入内容
+func CheckCreateWriteFile(filePath, fileName, content string) bool {
+	_, err := os.Stat(filePath)
+	if err != nil {
+		log.Warning(err)
+		log.Warning("start create " + filePath + "...")
+		err := os.MkdirAll(filePath, os.ModePerm)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	log.Warning("start write " + fileName + "...")
+	f, err3 := os.Create(filePath + fileName) //创建文件
+	if err3 != nil {
+		log.Warning(err3)
+		log.Warning("create file fail," + fileName + "file is exist")
+	}
+	w := bufio.NewWriter(f) //创建新的 Writer 对象
+	n4, err3 := w.WriteString(content)
+	if err3 != nil {
+		log.Warning(err3)
+	}
+	log.Info("写入 " + strconv.Itoa(n4) + " 字节成功.")
+	w.Flush()
+	f.Close()
+	return false
+}
+
+// Exists 判断所给路径文件/文件夹是否存在
+func Exists(path string) bool {
+	_, err := os.Stat(path) //os.Stat获取文件信息
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+// IsContain 判断是否存在数组中
+// func IsContain(items []string, item string) bool {
+// 	for _, eachItem := range items {
+// 		if eachItem == item {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+// ShellToUse 定义shell使用bash
+const ShellToUse = "bash"
+
+// ShellOut 执行命令并返回结果
+func ShellOut(command string) bool {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd := exec.Command(ShellToUse, "-c", command)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	log.Info(stdout.String())
+	log.Error(stderr.String())
+	return true
 }
