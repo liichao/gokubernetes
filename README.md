@@ -45,7 +45,9 @@
 将docker更换container
 
 ### 6、apiserver scheduler controller-manager （未完成）
-    go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcip=10.249.0.0/16 clusterip=172.235.0.0/16 handle=install 
+    go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeportrange=2000-60000 handle=install 
+    go-install-kubernetes para=k8s ips=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeportrange=2000-60000 handle=install 
+    临时使用ips 后面更改为master
 
 将cfssl和cfssljson拷贝到相关机器上并执行创建证书
 note: 还未替换相关apiserver地址  config kube-controller-manager.kubeconfig kube-scheduler.kubeconfig
@@ -60,3 +62,4 @@ clusterip  cluster_ip  容器ip，不能与主机网络重合
 
 后期添加一个配置文件
 所有的参数均放到配置文件中
+    优化GetIPDes函数，让其直接返回ip列表

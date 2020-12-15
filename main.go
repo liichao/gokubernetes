@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-install-kubernetes/k8stools"
-	k8s "go-install-kubernetes/k8stools"
 	myTools "go-install-kubernetes/tools"
 	"io/ioutil"
 	"os"
@@ -75,8 +74,8 @@ func main() {
 	// ParaList := []string{"system", "chrony", "kubernetes", "createcert"}
 	confLists := []string{"10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
 	certFileLists := []string{"kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
-	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube"}
-	toolsFileLists := []string{"cfssl", "cfssljson", "etcd.tar.gz"}
+	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube","etcd.tar.gz"}
+	//toolsFileLists := []string{"cfssl", "cfssljson"}
 	yamlFileLists := []string{"read-group-rbac.yaml", "basic-auth-rbac.yaml"}
 	serviceFileLists := []string{"kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
 	k8spath := "/tmp/k8s/"
@@ -116,13 +115,13 @@ func main() {
 		myTools.CheckCreateWriteFile(k8spath+"cert/", file, string(filebytes))
 	}
 	// 将tools文件释放到相关目录
-	for _, file := range toolsFileLists {
-		filebytes, err := Asset("config/tools/" + file)
-		if err != nil {
-			panic(err)
-		}
-		myTools.CheckCreateWriteFile(k8spath+"tools/", file, string(filebytes))
-	}
+	// for _, file := range toolsFileLists {
+	// 	filebytes, err := Asset("config/tools/" + file)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	myTools.CheckCreateWriteFile(k8spath+"tools/", file, string(filebytes))
+	// }
 	// 将yaml文件释放到相关目录
 	for _, file := range yamlFileLists {
 		filebytes, err := Asset("config/yaml/" + file)
@@ -264,10 +263,25 @@ func main() {
 		}
 	case `k8s`:
 		log.Info(" 开始安装k8smaster三大组件...")
+		// 拼接etcd集群字符串
+		// etcdlist=https://10.10.76.222:2379,https://10.10.76.223:2379,https://10.10.76.225:2379
+		etcdIPSplit, etcdStartIP, etcdStopIP := myTools.GetIPDes(para[`etcd`].(string))
+		var etcdNodeList string
+		for ; etcdStartIP <= etcdStopIP; etcdStartIP++ {
+			etcdStartIPstr := strconv.Itoa(etcdStartIP)
+			log.Info(etcdIPSplit + etcdStartIPstr)
+			if etcdStartIP == etcdStopIP {
+				etcdNodeList = etcdNodeList + "https://" + etcdIPSplit + etcdStartIPstr + ":2379"
+			} else {
+				etcdNodeList = etcdNodeList + "https://" + etcdIPSplit + etcdStartIPstr + ":2379,"
+			}
+		}
+		log.Info("etcdlist:" + etcdNodeList)
 		if para[`handle`].(string) == "install" {
-			for i := 0; i <= threadNum-1; i++ {
-				hostStartIPstr := strconv.Itoa(hostStartIP - i - 1)
-				go k8s.InstallK8sMaster(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, &wg)
+			for ; hostStartIP <= hostStopIP; hostStartIP++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP)
+				log.Info(hostIPSplit + hostStartIPstr)
+				go k8stools.InstallK8sMaster(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, para[`nodeportrange`].(string), para[`svcIP`].(string), etcdNodeList, para[`clusterIP`].(string), &wg)
 			}
 			wg.Wait()
 			log.Info("k8s master 三大组件安装完成.")

@@ -16,7 +16,7 @@ var format = logging.MustStringFormatter(
 )
 
 // InstallK8sMaster 安装k8s master
-func InstallK8sMaster(ip, pwd, k8spath string, ws *sync.WaitGroup) {
+func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clusterIP string, ws *sync.WaitGroup) {
 	log.Info(ip + pwd)
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
@@ -24,8 +24,8 @@ func InstallK8sMaster(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 		panic(err)
 	}
 	defer c.Close()
-	if !c.IsExist("/opt/kubenetes/cfg/") {
-		err = c.MkdirAll("/opt/kubenetes/cfg/")
+	if !c.IsExist("/opt/kubernetes/cfg/") {
+		err = c.MkdirAll("/opt/kubernetes/cfg/")
 		if err != nil {
 			log.Error(err)
 		}
@@ -36,16 +36,25 @@ func InstallK8sMaster(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 			log.Error(err)
 		}
 	}
+	// 拷贝 kubernetes-csr.json 到/opt/kuberntes/cfg目录下
+	log.Info(ip + "拷贝kubernetes-csr.json到/opt/kuberntes/cfg/目录")
+	err = c.Upload(k8spath+"cert/kubernetes-csr.json", "/opt/kubernetes/cfg/kubernetes-csr.json")
+	if err != nil {
+		log.Info(err)
+	}
 	// 拷贝 hyperkube 到主机
+	log.Info(ip + "拷贝hyperkube到/opt/kuberntes/bin/目录")
 	err = c.Upload(k8spath+"tools/hyperkube", "/opt/kubernetes/bin/hyperkube")
 	if err != nil {
 		log.Info(err)
 	}
+	log.Info(ip + "拷贝cfssl到/opt/kuberntes/bin/目录")
 	err = c.Upload(k8spath+"tools/cfssl", "/opt/kubernetes/bin/cfssl")
 	if err != nil {
 		log.Info(err)
 	}
-	err = c.Upload(k8spath+"tools/cfssl", "/opt/kubernetes/bin/cfssl")
+	log.Info(ip + "拷贝cfssljson到/opt/kuberntes/bin/目录")
+	err = c.Upload(k8spath+"tools/cfssljson", "/opt/kubernetes/bin/cfssljson")
 	if err != nil {
 		log.Info(err)
 	}
@@ -61,32 +70,73 @@ func InstallK8sMaster(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 	}
 	// 分发证书和config
 	// basic-auth.csv apiserver 基础认证（用户名/密码）配置
-	certList := []string{"basic-auth.csv", "admin.pem", "admin-key.pem", "ca.pem", "ca-key.pem", "ca-config.json", "kube-proxy.kubeconfig", "kube-controller-manager.kubeconfig", "kube-scheduler.kubeconfig"}
+	certList := []string{"basic-auth.csv", "admin.pem", "admin-key.pem", "ca.pem", "ca-key.pem", "ca-config.json", "kube-proxy.kubeconfig", "kube-controller-manager.kubeconfig", "kube-scheduler.kubeconfig", "aggregator-proxy-csr.json"}
 	for _, file := range certList {
-		err = c.Upload(k8spath+"cert/"+file, "/opt/kubenetes/cfg/"+file)
+		err = c.Upload(k8spath+"cert/"+file, "/opt/kubernetes/cfg/"+file)
 		if err != nil {
 			log.Info(err)
 		}
 	}
 	// 修改config配置
-	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /opt/kubenetes/cfg/kubernetes-csr.json")
+	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /opt/kubernetes/cfg/kubernetes-csr.json")
 	if err != nil {
 		log.Error(err)
 	}
 	// 创建 kubernetes 证书和私钥
-	shell = "cd /opt/kubenetes/cfg/ && /opt/kubenetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json |  /opt/kubenetes/bin/cfssljson -bare kubernetes"
+	shell = "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json |  /opt/kubernetes/bin/cfssljson -bare kubernetes"
 	log.Info(shell)
 	if !myTools.ShellOut(shell) {
-		log.Error(" 创建 kubernetes 证书和私钥失败!!!")
+		log.Error("创建 kubernetes 证书和私钥失败!!!")
 	}
 	// 创建 aggregator proxy证书签名请求
-	shell = "cd /opt/kubenetes/cfg/ && /opt/kubenetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes aggregator-proxy-csr.json |  /opt/kubenetes/bin/cfssljson -bare aggregator-proxy"
-	log.Info(shell)
+	shell = "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes aggregator-proxy-csr.json |  /opt/kubernetes/bin/cfssljson -bare aggregator-proxy"
+	log.Info(ip + shell)
 	if !myTools.ShellOut(shell) {
 		log.Error(" aggregator proxy证书签名请求失败!!!")
 	}
-	// err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /etc/systemd/system/etcd.service")
-	// if err != nil {
-	// 	log.Error(err)
-	// }
+	// 分发service文件
+	service := []string{"kube-apiserver.service", "kube-controller-manager.service", "kube-scheduler.service"}
+	for _, file := range service {
+		err = c.Upload(k8spath+"service/"+file, "/etc/systemd/system/"+file)
+		if err != nil {
+			log.Info(err)
+		}
+	}
+	// 更改service配置
+	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /etc/systemd/system/kube-apiserver.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's/NODE_PORT_RANGE/" + nodeportrange + "/g' /etc/systemd/system/kube-apiserver.service")
+	if err != nil {
+		log.Error(err)
+	}
+	// 因为特殊字符将/换成%
+	err = c.Exec("sed -i 's%SERVICE_CIDR%" + svcIP + "%g' /etc/systemd/system/kube-apiserver.service")
+	if err != nil {
+		log.Error(err)
+	}
+	// 因为特殊字符将/换成%
+	err = c.Exec("sed -i 's%ETCD_ENDPOINTS%" + etcdNodeList + "%g' /etc/systemd/system/kube-apiserver.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's%NODE_CIDR_LEN%" + clusterIP + "%g' /etc/systemd/system/kube-controller-manager.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's%.*server.*%" + "    server: https://" + ip + ":6443" + "%g' /opt/kubernetes/cfg/kube-controller-manager.kubeconfig")
+	if err != nil {
+		log.Error(err)
+	}
+	shell = "sed -i 's%.*server.*%" + "    server: https://" + ip + ":6443" + "%g' /opt/kubernetes/cfg/kube-controller-manager.kubeconfig"
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's%.*server.*%" + "    server: https://" + ip + ":6443" + "%g' /root/.kube/config")
+	if err != nil {
+		log.Error(err)
+	}
 }
