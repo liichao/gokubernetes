@@ -16,7 +16,7 @@ var format = logging.MustStringFormatter(
 )
 
 // InstallK8sMaster 安装k8s master
-func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clusterIP string, ws *sync.WaitGroup) {
+func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clusterIP, nodeCidrLen string, ws *sync.WaitGroup) {
 	log.Info(ip + pwd)
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
@@ -41,6 +41,12 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	err = c.Upload(k8spath+"cert/kubernetes-csr.json", "/opt/kubernetes/cfg/kubernetes-csr.json")
 	if err != nil {
 		log.Info(err)
+	}
+	APISERVERSVCIP, _, _ := myTools.GetIPDes(svcIP)
+	// 替换证书kubernetes-csr.json中的apiserverSVC地址
+	err = c.Exec("sed -i 's/APISERVERSVCIP/" + APISERVERSVCIP + "1/g' /opt/kubernetes/cfg/kubernetes-csr.json")
+	if err != nil {
+		log.Error(err)
 	}
 	// 拷贝 hyperkube 到主机
 	log.Info(ip + "拷贝hyperkube到/opt/kuberntes/bin/目录")
@@ -84,15 +90,24 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	}
 	// 创建 kubernetes 证书和私钥
 	shell = "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json |  /opt/kubernetes/bin/cfssljson -bare kubernetes"
-	log.Info(shell)
-	if !myTools.ShellOut(shell) {
-		log.Error("创建 kubernetes 证书和私钥失败!!!")
+	// log.Info(shell)
+	// if !myTools.ShellOut(shell) {
+	// 	log.Error("创建 kubernetes 证书和私钥失败!!!")
+	// }
+	// 将本地执行修改为远程服务器上执行
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
 	}
 	// 创建 aggregator proxy证书签名请求
 	shell = "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes aggregator-proxy-csr.json |  /opt/kubernetes/bin/cfssljson -bare aggregator-proxy"
 	log.Info(ip + shell)
-	if !myTools.ShellOut(shell) {
-		log.Error(" aggregator proxy证书签名请求失败!!!")
+	// if !myTools.ShellOut(shell) {
+	// 	log.Error(" aggregator proxy证书签名请求失败!!!")
+	// }
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
 	}
 	// 分发service文件
 	service := []string{"kube-apiserver.service", "kube-controller-manager.service", "kube-scheduler.service"}
@@ -101,6 +116,10 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 		if err != nil {
 			log.Info(err)
 		}
+	}
+	err = c.Upload(k8spath+"yaml/basic-auth-rbac.yaml", "/opt/kubernetes/cfg/basic-auth-rbac.yaml")
+	if err != nil {
+		log.Info(err)
 	}
 	// 更改service配置
 	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /etc/systemd/system/kube-apiserver.service")
@@ -121,7 +140,11 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Error(err)
 	}
-	err = c.Exec("sed -i 's%NODE_CIDR_LEN%" + clusterIP + "%g' /etc/systemd/system/kube-controller-manager.service")
+	err = c.Exec("sed -i 's%CLUSTER_CIDR%" + clusterIP + "%g' /etc/systemd/system/kube-controller-manager.service")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's%NODE_CIDR_LEN%" + nodeCidrLen + "%g' /etc/systemd/system/kube-controller-manager.service")
 	if err != nil {
 		log.Error(err)
 	}
@@ -139,4 +162,60 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Error(err)
 	}
+	// 配置etcd开机启动并启动
+	for _, apiservername := range service {
+		err = c.Exec("systemctl enable " + apiservername)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl daemon-reload")
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl restart " + apiservername)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl status " + apiservername)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+
+}
+
+// RemoveK8sMaster 删除etcd集群
+func RemoveK8sMaster(ip, pwd string, ws *sync.WaitGroup) {
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	service := []string{"kube-apiserver.service", "kube-controller-manager.service", "kube-scheduler.service"}
+	for _, masterService := range service {
+		err = c.Exec("systemctl disable " + masterService)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl stop " + masterService)
+		if err != nil {
+			log.Error(err)
+		}
+		log.Info("删除service文件")
+		err = c.Exec("rm -rf /etc/systemd/system/" + masterService)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	log.Info("删除所有配置文件与证书")
+	err = c.Exec("rm -rf /opt/kubernetes/cfg")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl daemon-reload")
+	if err != nil {
+		log.Error(err)
+	}
+	log.Info("删除k8s master服务完成.")
 }

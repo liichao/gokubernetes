@@ -3,7 +3,7 @@
   "hosts": [
     "127.0.0.1",
     "inventory_hostname",
-    "10.240.0.2",
+    "APISERVERSVCIP",
     "10.1.1.1",
     "k8s.test.io",
     "kubernetes",

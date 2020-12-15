@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/op/go-logging"
+	"github.com/pytool/ssh"
 )
 
 // 定义日志格式
@@ -266,25 +267,47 @@ func main() {
 		// 拼接etcd集群字符串
 		// etcdlist=https://10.10.76.222:2379,https://10.10.76.223:2379,https://10.10.76.225:2379
 		etcdIPSplit, etcdStartIP, etcdStopIP := myTools.GetIPDes(para[`etcd`].(string))
-		var etcdNodeList string
-		for ; etcdStartIP <= etcdStopIP; etcdStartIP++ {
-			etcdStartIPstr := strconv.Itoa(etcdStartIP)
-			log.Info(etcdIPSplit + etcdStartIPstr)
-			if etcdStartIP == etcdStopIP {
-				etcdNodeList = etcdNodeList + "https://" + etcdIPSplit + etcdStartIPstr + ":2379"
-			} else {
-				etcdNodeList = etcdNodeList + "https://" + etcdIPSplit + etcdStartIPstr + ":2379,"
+		if para[`handle`].(string) == "install" {
+			var etcdNodeList string
+			for ; etcdStartIP <= etcdStopIP; etcdStartIP++ {
+				etcdStartIPstr := strconv.Itoa(etcdStartIP)
+				log.Info(etcdIPSplit + etcdStartIPstr)
+				if etcdStartIP == etcdStopIP {
+					etcdNodeList = etcdNodeList + "https://" + etcdIPSplit + etcdStartIPstr + ":2379"
+				} else {
+					etcdNodeList = etcdNodeList + "https://" + etcdIPSplit + etcdStartIPstr + ":2379,"
+				}
+			}
+			log.Info("etcdlist:" + etcdNodeList)
+			if para[`handle`].(string) == "install" {
+				for ; hostStartIP <= hostStopIP; hostStartIP++ {
+					hostStartIPstr := strconv.Itoa(hostStartIP)
+					log.Info(hostIPSplit + hostStartIPstr)
+					go k8stools.InstallK8sMaster(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, para[`nodeportrange`].(string), para[`svcIP`].(string), etcdNodeList, para[`clusterIP`].(string), para[`nodeCidrLen`].(string), &wg)
+				}
+				wg.Wait()
+				log.Info("k8s master 三大组件安装完成.")
+			}
+			// kubectl apply -f basic-auth-rbac.yaml 随便找一台机器执行即可
+			c, err := ssh.NewClient(hostIPSplit+strconv.Itoa(hostStartIP), "22", "root", para[`pwd`].(string))
+			if err != nil {
+				panic(err)
+			}
+			defer c.Close()
+			err = c.Exec("/opt/kubernetes/bin/hyperkube kubectl apply -f /opt/kubernetes/cfg/basic-auth-rbac.yaml")
+			if err != nil {
+				log.Error(err)
 			}
 		}
-		log.Info("etcdlist:" + etcdNodeList)
-		if para[`handle`].(string) == "install" {
+		//删除操作
+		if para[`handle`].(string) == "uninstall" {
 			for ; hostStartIP <= hostStopIP; hostStartIP++ {
 				hostStartIPstr := strconv.Itoa(hostStartIP)
 				log.Info(hostIPSplit + hostStartIPstr)
-				go k8stools.InstallK8sMaster(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, para[`nodeportrange`].(string), para[`svcIP`].(string), etcdNodeList, para[`clusterIP`].(string), &wg)
+				go k8stools.RemoveK8sMaster(hostIPSplit+hostStartIPstr, para[`pwd`].(string), &wg)
 			}
 			wg.Wait()
-			log.Info("k8s master 三大组件安装完成.")
+			log.Info("k8s 删除完成.")
 		}
 	}
 }

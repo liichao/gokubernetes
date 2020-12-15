@@ -45,8 +45,8 @@
 将docker更换container
 
 ### 6、apiserver scheduler controller-manager （未完成）
-    go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeportrange=2000-60000 handle=install 
-    go-install-kubernetes para=k8s ips=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeportrange=2000-60000 handle=install 
+    go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeCidrLen=24 nodeportrange=2000-60000 handle=install 
+    go-install-kubernetes para=k8s ips=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeCidrLen=24 nodeportrange=2000-60000 handle=install 
     临时使用ips 后面更改为master
 
 将cfssl和cfssljson拷贝到相关机器上并执行创建证书
@@ -55,6 +55,7 @@ note: 将所有二进制文件一起拷贝过去
 
 svcip service_ip 不能与主机网络重合
 clusterip  cluster_ip  容器ip，不能与主机网络重合
+单个node节点允许分布多少个容器ip网段NODE_CIDR_LEN =24
 
 ### 未来想法（未完成）
     go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs
@@ -63,3 +64,7 @@ clusterip  cluster_ip  容器ip，不能与主机网络重合
 后期添加一个配置文件
 所有的参数均放到配置文件中
     优化GetIPDes函数，让其直接返回ip列表
+
+### 注意事项
+
+如果重新生成证书，请从etcd开始重新生成。以免导致k8sapi服务因证书原因导致无法链接到etcd
