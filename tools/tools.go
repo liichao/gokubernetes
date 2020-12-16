@@ -17,6 +17,19 @@ var format = logging.MustStringFormatter(
 	`%{color}%{time:15:04:05.000} %{shortfunc} > %{level:.4s} %{id:03x}%{color:reset} %{message}`,
 )
 
+// GetLastString 取切片最后一个值
+func GetLastString(ss []string) string {
+	return ss[len(ss)-1]
+}
+
+// GetIPString 获取ip前三个值
+func GetIPString(str string) string {
+	if len(strings.Split(str, `.`)) != 4 {
+		return "ip input Error!"
+	}
+	return strings.Split(str, `.`)[0] + "." + strings.Split(str, `.`)[1] + "." + strings.Split(str, `.`)[2] + "."
+}
+
 // GetIPDes 获取IP前面的地址
 func GetIPDes(ips string) (string, int, int) {
 	if len(strings.Split(ips, `.`)) != 4 {

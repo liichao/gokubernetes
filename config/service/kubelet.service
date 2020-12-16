@@ -1,0 +1,35 @@
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+
+[Service]
+WorkingDirectory=/var/lib/kubelet
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpu/podruntime.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpuacct/podruntime.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpuset/podruntime.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/memory/podruntime.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/pids/podruntime.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/systemd/podruntime.slice
+
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpu/system.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpuacct/system.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpuset/system.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/memory/system.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/pids/system.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/systemd/system.slice
+
+ExecStart=/opt/kubernetes/bin/hyperkube kubelet \
+  --config=/opt/kubernetes/cfg/kubelet-config.yaml \
+  --cni-bin-dir=/opt/kubernetes/bin/ \
+  --cni-conf-dir=/etc/cni/net.d \
+  --hostname-override=inventory_hostname\
+  --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig \
+  --network-plugin=cni \
+  --pod-infra-container-image=SANDBOX_IMAGE \
+  --root-dir=/var/lib/kubelet/ \
+  --v=2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

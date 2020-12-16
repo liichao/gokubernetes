@@ -44,9 +44,9 @@
 - 完成后规划（待完成）
 将docker更换container
 
-### 6、apiserver scheduler controller-manager （未完成）
+### 6、apiserver scheduler controller-manager
     go-install-kubernetes para=k8s master=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeCidrLen=24 nodeportrange=2000-60000 handle=install 
-    go-install-kubernetes para=k8s ips=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 svcIP=10.249.0.0/16 clusterIP=172.235.0.0/16 nodeCidrLen=24 nodeportrange=2000-60000 handle=install 
+    go-install-kubernetes para=k8s ips=10.10.77.202-204  etcd=10.10.77.202-204 pwd=密码 handle=install 
     临时使用ips 后面更改为master
 
 将cfssl和cfssljson拷贝到相关机器上并执行创建证书
@@ -56,6 +56,15 @@ note: 将所有二进制文件一起拷贝过去
 svcip service_ip 不能与主机网络重合
 clusterip  cluster_ip  容器ip，不能与主机网络重合
 单个node节点允许分布多少个容器ip网段NODE_CIDR_LEN =24
+
+### 6、安装kubelet kube-proxy（待完成）
+    go-install-kubernetes para=k8snode master=10.10.77.202-204 node=10.10.77.206 pwd=herenit123 svcIP=10.249.0.0/16 proxyMode=ipvs pauseImage=easzlab/pause-amd64:3.2 clusterIP=172.235.0.0/16 maxPods=88 handle=install
+    # 设置 dns svc ip
+    svnIP 获取第二个地址用以dns
+    # node节点最大pod 数
+    maxPods=88 
+    // ipvs 负载均衡master后期在做
+    关于masterip这边临时取了第一个masterip为apiserverip
 
 ### 未来想法（未完成）
     go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs

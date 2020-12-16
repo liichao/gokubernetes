@@ -73,12 +73,12 @@ func main() {
 	var wg sync.WaitGroup
 	para := make(map[string]interface{})
 	// ParaList := []string{"system", "chrony", "kubernetes", "createcert"}
-	confLists := []string{"10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
-	certFileLists := []string{"kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
+	confLists := []string{"cni-default.conf", "10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
+	certFileLists := []string{"kubelet-csr.json", "kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube","etcd.tar.gz"}
 	//toolsFileLists := []string{"cfssl", "cfssljson"}
-	yamlFileLists := []string{"read-group-rbac.yaml", "basic-auth-rbac.yaml"}
-	serviceFileLists := []string{"kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
+	yamlFileLists := []string{"read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
+	serviceFileLists := []string{"kubelet.service", "kube-proxy.service", "kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
 	k8spath := "/tmp/k8s/"
 	// 获取命令行参数,并检查参数是否存在
 	if len(os.Args) < 2 {
@@ -308,6 +308,20 @@ func main() {
 			}
 			wg.Wait()
 			log.Info("k8s 删除完成.")
+		}
+	case `node`:
+		hostIPSplit, hostStartIP, hostStopIP = myTools.GetIPDes(para[`node`].(string))
+		// to-do 这边临时取了第一个masterip为apiserverip
+		apiserver := hostIPSplit + strconv.Itoa(hostStartIP)
+		if para[`handle`].(string) == "install" {
+			
+			for ; hostStartIP <= hostStopIP; hostStartIP++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP)
+				log.Info(hostIPSplit + hostStartIPstr)
+				go k8stools.InstallK8sNode(hostIPSplit+hostStartIPstr, para[`pwd`].(string), para[`svcIP`].(string), k8spath, apiserver, para[`maxPods`].(string), para[`clusterIP`].(string), para[`proxyMode`].(string), para[`pauseImage`].(string), &wg)
+			}
+			wg.Wait()
+			log.Info("k8s master 三大组件安装完成.")
 		}
 	}
 }
