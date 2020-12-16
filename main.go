@@ -312,9 +312,9 @@ func main() {
 	case `node`:
 		hostIPSplit, hostStartIP, hostStopIP = myTools.GetIPDes(para[`node`].(string))
 		// to-do 这边临时取了第一个masterip为apiserverip
-		apiserver := hostIPSplit + strconv.Itoa(hostStartIP)
+		apiserver := "10.10.77.202"
 		if para[`handle`].(string) == "install" {
-			
+
 			for ; hostStartIP <= hostStopIP; hostStartIP++ {
 				hostStartIPstr := strconv.Itoa(hostStartIP)
 				log.Info(hostIPSplit + hostStartIPstr)

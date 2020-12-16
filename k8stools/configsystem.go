@@ -74,7 +74,8 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	sysversion := strings.Split(strings.Split(string(versionoutput[:]), "-")[1], " ")[1]
+	log.Info(string(versionoutput[:]))
+	sysversion := strings.Split(strings.Split(string(versionoutput[:]), " ")[2], "1")[1]
 	log.Info(ip + " 系统版本Version:" + sysversion)
 	sysversionint, err := strconv.Atoi(strings.Split(sysversion, ".")[0])
 	if err != nil {

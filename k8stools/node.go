@@ -81,7 +81,7 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 		log.Error(err)
 	}
 	// 设置集群参数
-	shell = "/opt/kubernetes/bin/hyperkube kubectl config set-cluster kubernetes --certificate-authority=/opt/kubernetes/cfg/cert/ca.pem --embed-certs=true --server=" + apiserver + " --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
+	shell = "/opt/kubernetes/bin/hyperkube kubectl config set-cluster kubernetes --certificate-authority=/opt/kubernetes/cfg/cert/ca.pem --embed-certs=true --server=https://" + apiserver + ":6443 --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
 	err = c.Exec(shell)
 	if err != nil {
 		log.Error(err)
