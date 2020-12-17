@@ -142,4 +142,9 @@ func CreateCert(k8spath string) {
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
+	// 创建flanneld的证书
+	// shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes flanneld-csr.json | " + k8spath + "tools/cfssljson -bare flanneld"
+	// if !myTools.ShellOut(shell) {
+	// 	log.Error("创建flanneld证书失败!!!")
+	// }
 }

@@ -30,6 +30,11 @@ func GetIPString(str string) string {
 	return strings.Split(str, `.`)[0] + "." + strings.Split(str, `.`)[1] + "." + strings.Split(str, `.`)[2] + "."
 }
 
+//replaceString将ip中的.更改为-并返回 node-1-1-1-1
+func replaceString(str string) string {
+	return "node-" + strings.ReplaceAll(str, ".", "-")
+}
+
 // GetIPDes 获取IP前面的地址
 func GetIPDes(ips string) (string, int, int) {
 	if len(strings.Split(ips, `.`)) != 4 {

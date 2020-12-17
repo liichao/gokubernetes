@@ -17,6 +17,15 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 		panic(err)
 	}
 	defer c.Close()
+	// 更改主机名
+	err = c.Exec("echo '" + "node-" + strings.ReplaceAll(ip, ".", "-") + "' > /etc/hostname")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("hostname " + "node-" + strings.ReplaceAll(ip, ".", "-"))
+	if err != nil {
+		log.Error(err)
+	}
 	// 创建目录
 	kubeListPath := []string{"/opt/kubernetes/cfg/cert/", "/root/.kube/", "/var/lib/kubelet/", "/var/lib/kube-proxy/", "/etc/cni/net.d/", "/opt/kubernetes/bin/"}
 	for _, kubepath := range kubeListPath {
@@ -32,7 +41,7 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 	if err != nil {
 		log.Info(err)
 	}
-	err = c.Exec("sed -i 's%CLUSTER_CIDR%" + clusterIP + "%g' /opt/kubernetes/cfg/cert/kubelet-csr.json")
+	err = c.Exec("sed -i 's%CLUSTER_CIDR%" + clusterIP + "%g' /etc/cni/net.d/cni-default.conf")
 	if err != nil {
 		log.Error(err)
 	}
@@ -159,6 +168,65 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 		log.Error(err)
 	}
 	err = c.Exec("sed -i 's%SANDBOX_IMAGE%" + pauseImage + "%g' /etc/systemd/system/kubelet.service")
+	if err != nil {
+		log.Error(err)
+	}
+	// 替换kube-proxy.kubeconfig中的api地址
+	err = c.Exec("sed -i 's%.*server.*%" + "    server: https://" + apiserver + ":6443" + "%g' /opt/kubernetes/cfg/kube-proxy.kubeconfig")
+	if err != nil {
+		log.Error(err)
+	}
+	// 配置服务开机启动并启动
+	for _, nodeService := range nodeServerFile {
+		err = c.Exec("systemctl enable " + nodeService)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl daemon-reload")
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl restart " + nodeService)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl status " + nodeService)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+// RemoveK8sNode 删除kubelet和kube-proxy
+func RemoveK8sNode(ip, pwd string, ws *sync.WaitGroup) {
+	log.Info(ip + pwd)
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	//// 开始释放service文件,并进行配置
+	nodeServerFile := []string{"kube-proxy.service", "kubelet.service"}
+	for _, serviceFile := range nodeServerFile {
+		err = c.Exec("systemctl disable " + serviceFile)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl stop " + serviceFile)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("systemctl daemon-reload")
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.Exec("rm -rf /etc/systemd/system/" + serviceFile)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	err = c.Exec("rm -rf /opt/kubernetes/cfg")
 	if err != nil {
 		log.Error(err)
 	}

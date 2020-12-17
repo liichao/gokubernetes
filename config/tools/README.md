@@ -22,3 +22,5 @@ tools工具包中的文件与下载地址
 #### cni网络插件下载地址
 
     https://github.com/containernetworking/plugins/releases
+flannel
+    https://github.com/coreos/flannel/releases

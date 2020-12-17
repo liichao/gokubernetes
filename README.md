@@ -57,8 +57,8 @@ svcip service_ip 不能与主机网络重合
 clusterip  cluster_ip  容器ip，不能与主机网络重合
 单个node节点允许分布多少个容器ip网段NODE_CIDR_LEN =24
 
-### 6、安装kubelet kube-proxy（待完成）
-    go-install-kubernetes para=k8snode master=10.10.77.202-204 node=10.10.77.206 pwd=herenit123 svcIP=10.249.0.0/16 proxyMode=ipvs pauseImage=easzlab/pause-amd64:3.2 clusterIP=172.235.0.0/16 maxPods=88 handle=install
+### 6、安装kubelet kube-proxy
+    go-install-kubernetes para=k8snode master=10.10.77.202-204 node=10.10.77.206 pwd=herenit123 svcIP=10.249.0.0/16 proxyMode=ipvs pauseImage=easzlab/pause-amd64:3.2  clusterIP=172.235.0.0/16 maxPods=88 handle=install
     # 设置 dns svc ip
     svnIP 获取第二个地址用以dns
     # node节点最大pod 数
@@ -66,9 +66,14 @@ clusterip  cluster_ip  容器ip，不能与主机网络重合
     // ipvs 负载均衡master后期在做
     关于masterip这边临时取了第一个masterip为apiserverip
 
+### 7、安装网络flannel 暂时只支持这个模式
+  ./go-install-kubernetes para=network node=10.10.77.208 pwd=herenit123 flannelBackend=vxlan flanneldImage=dzero.com/base/flannel:v0.13.0-amd64 clusterIP=172.235.0.0/16 ips=1.1.1.1 handle=install
+默认启用ipvs
+flannelBackend vxlan host-gw
+
+----待重新测试一波 总感觉有个bug 还未添加删除
 ### 未来想法（未完成）
-    go-install-kubernetes etcd=10.10.77.202-204 master=10.10.77.202-204 node=10.10.77.205-210 pwd=密码 ntpserver=ntpserver proxymode=ipvs
-当proxymode不为ipvs为不启用ipvs
+  
 
 后期添加一个配置文件
 所有的参数均放到配置文件中

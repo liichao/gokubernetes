@@ -77,7 +77,7 @@ func main() {
 	certFileLists := []string{"kubelet-csr.json", "kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	//toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube","etcd.tar.gz"}
 	//toolsFileLists := []string{"cfssl", "cfssljson"}
-	yamlFileLists := []string{"read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
+	yamlFileLists := []string{"kube-flannel-vxlan.yaml", "kube-flannel.yaml", "read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
 	serviceFileLists := []string{"kubelet.service", "kube-proxy.service", "kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
 	k8spath := "/tmp/k8s/"
 	// 获取命令行参数,并检查参数是否存在
@@ -314,14 +314,69 @@ func main() {
 		// to-do 这边临时取了第一个masterip为apiserverip
 		apiserver := "10.10.77.202"
 		if para[`handle`].(string) == "install" {
-
 			for ; hostStartIP <= hostStopIP; hostStartIP++ {
 				hostStartIPstr := strconv.Itoa(hostStartIP)
 				log.Info(hostIPSplit + hostStartIPstr)
 				go k8stools.InstallK8sNode(hostIPSplit+hostStartIPstr, para[`pwd`].(string), para[`svcIP`].(string), k8spath, apiserver, para[`maxPods`].(string), para[`clusterIP`].(string), para[`proxyMode`].(string), para[`pauseImage`].(string), &wg)
 			}
 			wg.Wait()
-			log.Info("k8s master 三大组件安装完成.")
+			log.Info("k8s node kubelet kube-proxy组件安装完成.")
 		}
+		if para[`handle`].(string) == "uninstall" {
+			for ; hostStartIP <= hostStopIP; hostStartIP++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP)
+				go k8stools.RemoveK8sNode(hostIPSplit+hostStartIPstr, para[`pwd`].(string), &wg)
+			}
+			wg.Wait()
+			log.Info("k8s node kubelet kube-proxy组件卸载完成.")
+		}
+	case `network`:
+		hostIPSplit, hostStartIP, hostStopIP = myTools.GetIPDes(para[`node`].(string))
+		if para[`handle`].(string) == "install" {
+			for ; hostStartIP <= hostStopIP; hostStartIP++ {
+				hostStartIPstr := strconv.Itoa(hostStartIP)
+				log.Info(hostIPSplit + hostStartIPstr)
+				go k8stools.InstallK8sNetwork(hostIPSplit+hostStartIPstr, para[`pwd`].(string), k8spath, para[`flannelBackend`].(string), &wg)
+			}
+			wg.Wait()
+			log.Info("k8s node kubelet kube-proxy组件安装完成.")
+		}
+		shell := ""
+		if para[`flannelBackend`].(string) == "vxlan" {
+			shell = "sed -i 's%flanneld_image%" + para[`flanneldImage`].(string) + "%g' " + k8spath + "yaml/kube-flannel-vxlan.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("替换镜像地址失败")
+			}
+			shell = "sed -i 's%CLUSTER_CIDR%" + para[`clusterIP`].(string) + "%g' " + k8spath + "yaml/kube-flannel-vxlan.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("替换flanneld的IP段失败!!!")
+			}
+			shell = "sed -i 's%FLANNEL_BACKEND%" + para[`flannelBackend`].(string) + "%g' " + k8spath + "yaml/kube-flannel-vxlan.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("替换flanneld的模式失败!!!")
+			}
+			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/kube-flannel.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("创建 flannled失败!!!")
+			}
+		} else {
+			shell = "sed -i 's%flanneld_image%" + para[`flanneldImage`].(string) + "%g' " + k8spath + "yaml/kube-flannel.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("替换镜像地址失败")
+			}
+			shell = "sed -i 's%CLUSTER_CIDR%" + para[`clusterIP`].(string) + "%g' " + k8spath + "yaml/kube-flannel.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("替换flanneld的IP段失败!!!")
+			}
+			shell = "sed -i 's%FLANNEL_BACKEND%" + para[`flannelBackend`].(string) + "%g' " + k8spath + "yaml/kube-flannel.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("替换flanneld的模式失败!!!")
+			}
+			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/kube-flannel.yaml"
+			if !myTools.ShellOut(shell) {
+				log.Error("创建 flannled失败!!!")
+			}
+		}
+
 	}
 }

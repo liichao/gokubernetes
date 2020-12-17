@@ -10,6 +10,7 @@ ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpuset/podruntime.slice
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/memory/podruntime.slice
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/pids/podruntime.slice
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/systemd/podruntime.slice
+ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/hugetlb/podruntime.slice
 
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpu/system.slice
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/cpuacct/system.slice

@@ -66,8 +66,9 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	}
 	shell := "chmod 0755 /opt/kubernetes/bin/*"
 	log.Info(shell)
-	if !myTools.ShellOut(shell) {
-		log.Error(ip + "chmod 0755 /opt/kubernetes/bin/* 失败!!!")
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
 	}
 	// 分发config 可以不分发
 	err = c.Upload("/root/.kube/config", "/root/.kube/config")
@@ -162,7 +163,7 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Error(err)
 	}
-	// 配置etcd开机启动并启动
+	// 配置服务开机启动并启动
 	for _, apiservername := range service {
 		err = c.Exec("systemctl enable " + apiservername)
 		if err != nil {
