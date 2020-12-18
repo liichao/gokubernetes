@@ -19,8 +19,6 @@ func ConfigSystem(ip, pwd, proxymode, k8spath string, sysversionint int, ws *syn
 	defer c.Close()
 	// 开始更新系统版本与安装相关必要组件
 	log.Info("开始更新系统版本与安装相关必要组件")
-	// 临时添加dns
-	c.Exec("echo 'nameserver 114.114.114.114' > /etc/resolv.conf")
 	c.Exec("yum update -y")
 	err = c.Exec("yum install vim net-tools wget bash-completion conntrack-tools ipset ipvsadm libseccomp nfs-utils psmisc rsync socat -y")
 	if err != nil {
