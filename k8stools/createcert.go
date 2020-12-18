@@ -3,7 +3,7 @@ package k8stools
 import myTools "go-install-kubernetes/tools"
 
 // CreateCert 创建相关证书
-func CreateCert(k8spath string) {
+func CreateCert(k8spath, apiServer string) {
 	// 	# kubeconfig 配置参数，注意权限根据‘USER_NAME’设置：
 	// # 'admin' 表示创建集群管理员（所有）权限的 kubeconfig
 	// # 'read' 表示创建只读权限的 kubeconfig
@@ -16,7 +16,7 @@ func CreateCert(k8spath string) {
 	userName := "admin"
 	clusterName := "cluster1"
 	contextName := "context-" + userName + "-" + clusterName
-	kubeAPIServer := "https://10.10.77.202:6443"
+	kubeAPIServer := "https://" + apiServer + ":6443"
 	log.Info(contextName)
 	log.Info("开始创建k8s相关证书...")
 	// 卸载ntp 并安装 chrony

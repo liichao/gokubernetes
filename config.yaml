@@ -1,0 +1,94 @@
+# true/false  记得区分大小写
+# 是否全部安装
+All:
+  true
+# 相关配置目录
+k8sPath:
+  /tmp/k8s/
+# 是否配置系统
+system:
+  true
+# 系统内核 3或者4
+kernel:
+  3
+# 是否安装时间同步服务器
+chrony:
+  enable:
+    true
+  ntpServer:
+    ntp.aliyun.com
+master:
+  10.10.77.191-193
+node:
+  10.10.77.194-196
+apiServer:
+  10.10.77.191
+password:
+  密码
+# 是否启用ipvs，默认启用
+proxyMode:
+  ipvs
+# 创建证书，如果第二次运行可以改为no 第一次必须true
+createCert:
+  true
+# 是否安装etcd
+etcd:
+  true
+# 当为true安装etcd集群 当为false时 删除etcd集群
+etcdInstall:
+  true
+# 在node上安装docker
+docker:
+  true
+# 当为true安装docker 当为false时 删除docker
+dockerInstall:
+  true
+# docker的离线二进制文件放到k8spath/tools下
+dockerInstalltgz:
+  docker-18.09.6.tgz
+# k8s api 安装
+installK8sApi:
+  true
+removeK8sApi:
+  false
+# k8s node 安装
+installK8sNode:
+  true
+# k8s node 删除
+removeK8sNode:
+  false
+# k8s的serviceip地址段
+svcIP:
+  10.249.0.0/16
+# k8s pod内容器ip地址段
+clusterIP:
+  172.235.0.0/16
+# k8s node节点的掩码
+nodeCidrLen:
+  24
+# k8s nodePort允许分配的端口范围
+nodePortRange:
+  2000-60000
+# 单个node 允许运行最多pod数
+maxPods:
+  88
+# 网络模式  vxlan  host-gw 等
+flannelBackend:
+  vxlan
+# harbor地址
+harborIP:
+  10.10.76.185
+harborUrl:
+  dzero.com
+# harbor账户
+harborUser:
+  admin
+# harbor密码
+harborPwd:
+  harbor12345
+# flannled 镜像地址
+flanneldImage:
+  dzero.com/base/flannel:v0.13.0-amd64
+#  pasuse 镜像地址
+pauseImage:
+  dzero.com/base/pause-amd64:3.2

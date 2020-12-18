@@ -30,6 +30,14 @@ func GetIPString(str string) string {
 	return strings.Split(str, `.`)[0] + "." + strings.Split(str, `.`)[1] + "." + strings.Split(str, `.`)[2] + "."
 }
 
+// GetIPLastString 获取ip最后一个值
+func GetIPLastString(str string) string {
+	if len(strings.Split(str, `.`)) != 4 {
+		return "ip input Error!"
+	}
+	return strings.Split(str, `.`)[3]
+}
+
 //replaceString将ip中的.更改为-并返回 node-1-1-1-1
 func replaceString(str string) string {
 	return "node-" + strings.ReplaceAll(str, ".", "-")
@@ -124,7 +132,7 @@ func ShellOut(command string) bool {
 		log.Error(err)
 		return false
 	}
-	log.Info(stdout.String())
-	log.Error(stderr.String())
+	// log.Info(stdout.String())
+	// log.Error(stderr.String())
 	return true
 }

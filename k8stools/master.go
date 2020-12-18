@@ -42,7 +42,7 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Info(err)
 	}
-	APISERVERSVCIP, _, _ := myTools.GetIPDes(svcIP)
+	APISERVERSVCIP := myTools.GetIPString(svcIP)
 	// 替换证书kubernetes-csr.json中的apiserverSVC地址
 	err = c.Exec("sed -i 's/APISERVERSVCIP/" + APISERVERSVCIP + "1/g' /opt/kubernetes/cfg/kubernetes-csr.json")
 	if err != nil {
@@ -64,6 +64,7 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Info(err)
 	}
+	log.Info(ip + "chmod 0755 /opt/kubernetes/bin/* 赋权")
 	shell := "chmod 0755 /opt/kubernetes/bin/*"
 	log.Info(shell)
 	err = c.Exec(shell)

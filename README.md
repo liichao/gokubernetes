@@ -72,13 +72,14 @@ clusterip  cluster_ip  容器ip，不能与主机网络重合
 flannelBackend vxlan host-gw
 
 ----待重新测试一波 总感觉有个bug 还未添加删除
+
+### 8、harbor地址账户密码
+
 ### 未来想法（未完成）
-  
-
-后期添加一个配置文件
-所有的参数均放到配置文件中
-    优化GetIPDes函数，让其直接返回ip列表
-
+harbor地址与账户密码 在创建完成集群后自动创建证书
+后期规划服务网格 一键安装
 ### 注意事项
 
 如果重新生成证书，请从etcd开始重新生成。以免导致k8sapi服务因证书原因导致无法链接到etcd
+
+刚刚我在configsystem中临时添加了dns指向，调试后删除

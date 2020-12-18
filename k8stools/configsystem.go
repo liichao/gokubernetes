@@ -1,7 +1,6 @@
 package k8stools
 
 import (
-	"strconv"
 	"strings"
 	"sync"
 
@@ -9,7 +8,8 @@ import (
 )
 
 // ConfigSystem 配置系统参数
-func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
+func ConfigSystem(ip, pwd, proxymode, k8spath string, sysversionint int, ws *sync.WaitGroup) {
+	log.Info("开始配置" + ip + "地址...")
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
 	if err != nil {
@@ -19,6 +19,8 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	defer c.Close()
 	// 开始更新系统版本与安装相关必要组件
 	log.Info("开始更新系统版本与安装相关必要组件")
+	// 临时添加dns
+	c.Exec("echo 'nameserver 114.114.114.114' > /etc/resolv.conf")
 	c.Exec("yum update -y")
 	err = c.Exec("yum install vim net-tools wget bash-completion conntrack-tools ipset ipvsadm libseccomp nfs-utils psmisc rsync socat -y")
 	if err != nil {
@@ -53,6 +55,10 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Info(err)
 	}
+	err = c.Exec("sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config")
+	if err != nil {
+		log.Info(err)
+	}
 	// 优化rsyslog获取journald日志
 	log.Info(ip + " 优化rsyslog获取journald日志")
 	err = c.Exec("sed -i 's/$ModLoad imjournal/#$ModLoad imjournal/g' /etc/rsyslog.conf")
@@ -68,19 +74,19 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Info(err)
 	}
-	// 加载内核模块
-	log.Info(ip + "获取内核系统版本,并根据不同版本加载内核模块")
-	versionoutput, err := c.Output("uname -a")
-	if err != nil {
-		panic(err)
-	}
-	log.Info(string(versionoutput[:]))
-	sysversion := strings.Split(strings.Split(string(versionoutput[:]), " ")[2], "1")[1]
-	log.Info(ip + " 系统版本Version:" + sysversion)
-	sysversionint, err := strconv.Atoi(strings.Split(sysversion, ".")[0])
-	if err != nil {
-		log.Error("字符串转换成整数失败")
-	}
+	// // 加载内核模块
+	// log.Info(ip + "获取内核系统版本,并根据不同版本加载内核模块")
+	// versionoutput, err := c.Output("uname -a")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// log.Info(string(versionoutput[:]))
+	// sysversion := strings.Split(strings.Split(string(versionoutput[:]), " ")[2], "1")[1]
+	// log.Info(ip + " 系统版本Version:" + sysversion)
+	// sysversionint, err := strconv.Atoi(strings.Split(sysversion, ".")[0])
+	// if err != nil {
+	// 	log.Error("字符串转换成整数失败")
+	// }
 	// 系统内核版本小于4.19的 nf_conntrack模块名为：nf_conntrack_ipv4 大于4.19的名为nf_conntrack_ipv4
 	var nfConntrack string
 	var k8sSysctl bool
@@ -106,7 +112,7 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	}
 	// 将10-k8s-modules.conf放到服务器的指定目录/etc/modules-load.d/
 	log.Info(ip + " 拷贝 10-k8s-modules.conf 到 /etc/modules-load.d/")
-	err = c.Upload("/tmp/k8s/10-k8s-modules.conf", "/etc/modules-load.d/")
+	err = c.Upload(k8spath+"10-k8s-modules.conf", "/etc/modules-load.d/")
 	if err != nil {
 		log.Info(err)
 	}
@@ -116,7 +122,7 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	}
 	// 将95-k8s-sysctl.conf放到服务器的指定目录/etc/sysctl.d
 	log.Info(ip + " 拷贝 95-k8s-sysctl.conf 到 /etc/sysctl.d/")
-	err = c.Upload("/tmp/k8s/95-k8s-sysctl.conf", "/etc/sysctl.d/")
+	err = c.Upload(k8spath+"95-k8s-sysctl.conf", "/etc/sysctl.d/")
 	if err != nil {
 		log.Info(err)
 	}
@@ -149,7 +155,7 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 		log.Error(err)
 	}
 	log.Info(ip + " 拷贝 30-k8s-ulimits.conf 到 /etc/systemd/system.conf.d/")
-	err = c.Upload("/tmp/k8s/30-k8s-ulimits.conf", "/etc/systemd/system.conf.d/")
+	err = c.Upload(k8spath+"30-k8s-ulimits.conf", "/etc/systemd/system.conf.d/")
 	if err != nil {
 		log.Info(err)
 	}
@@ -158,14 +164,15 @@ func ConfigSystem(ip, pwd, proxymode string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Error(err)
 	}
-	err = c.Upload("/tmp/k8s/sctp.conf", "/etc/modprobe.d/")
+	err = c.Upload(k8spath+"sctp.conf", "/etc/modprobe.d/")
 	if err != nil {
 		log.Info(err)
 	}
 }
 
 // InstallChrony 安装时钟同步服务器
-func InstallChrony(ip, pwd, ntpserver string, ws *sync.WaitGroup) {
+func InstallChrony(ip, pwd, ntpserver, k8spath string, ws *sync.WaitGroup) {
+	log.Info("开始配置" + ip + "地址...")
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
 	if err != nil {
@@ -184,7 +191,7 @@ func InstallChrony(ip, pwd, ntpserver string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Error(err)
 	}
-	err = c.Upload("/tmp/k8s/server-centos.conf", "/etc/chrony.conf")
+	err = c.Upload(k8spath+"server-centos.conf", "/etc/chrony.conf")
 	if err != nil {
 		log.Info(err)
 	}

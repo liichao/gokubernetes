@@ -18,6 +18,7 @@ require (
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/sftp v1.12.0 // indirect
 	github.com/pytool/ssh v0.0.0-20190312091242-5aaea5918db7
+	github.com/spf13/viper v1.7.1
 	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
 	golang.org/x/tools v0.0.0-20201201035011-dcde6b0efb07
 	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
