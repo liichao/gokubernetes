@@ -125,7 +125,7 @@ func main() {
 	kernel := config.Get("kernel").(int)
 	dockerInstall := config.Get("dockerInstall").(bool)
 	dockerInstalltgz := config.Get("dockerInstalltgz").(string)
-	clusterDnsDomain := config.Get("clusterDnsDomain").(string)
+	clusterDNSDomain := config.Get("clusterDnsDomain").(string)
 	iptablesBinName := config.Get("repair.iptablesBinName").(string)
 	log.Info(flanneldImage)
 	log.Info(harborPwd)
@@ -369,7 +369,7 @@ func main() {
 		log.Info("开始安装node相关服务")
 		wg.Add(nodeIPList.Len())
 		for ip := nodeIPList.Front(); ip != nil; ip = ip.Next() {
-			go k8stools.InstallK8sNode(ip.Value.(string), password, svcIP, k8spath, apiServer, strconv.Itoa(maxPods), clusterIP, proxyMode, pauseImage, clusterDnsDomain, &wg)
+			go k8stools.InstallK8sNode(ip.Value.(string), password, svcIP, k8spath, apiServer, strconv.Itoa(maxPods), clusterIP, proxyMode, pauseImage, clusterDNSDomain, &wg)
 		}
 		wg.Wait()
 		log.Info("k8s node kubelet kube-proxy组件安装完成.")
@@ -576,7 +576,7 @@ func main() {
 			if !tools.ShellOut(shell) {
 				log.Error("替换dnsIP失败!!!")
 			}
-			shell = "sed -i 's%CLUSTER_DNS_DOMAIN%" + config.Get("clusterDnsDomain").(string) + "%g' " + k8spath + "yaml/coredns.yaml"
+			shell = "sed -i 's%CLUSTER_DNS_DOMAIN%" + clusterDNSDomain + "%g' " + k8spath + "yaml/coredns.yaml"
 			log.Info("替换dns name  " + shell)
 			if !tools.ShellOut(shell) {
 				log.Error("替换dns name 失败!!!")
