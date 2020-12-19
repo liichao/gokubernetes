@@ -593,13 +593,10 @@ func main() {
 			if !tools.ShellOut(shell) {
 				log.Error("创建CoreDNS!!!")
 			}
-			// 输出创建结果
 			time.Sleep(time.Second * 10)
+			// 输出创建结果
 			shell = k8spath + "tools/hyperkube kubectl get pod -o wide -n kube-system"
-			log.Info("创建CoreDNS " + shell)
-			if !tools.ShellOut(shell) {
-				log.Error("创建CoreDNS!!!")
-			}
+			log.Info("查看CoreDNS创建状态 " + shell)
 		}
 	}
 }

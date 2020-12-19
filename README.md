@@ -1,6 +1,9 @@
 # gokubernetes
 用golang编写一个 一键部署k8s集群，并用来学习golang
 
+## 前期准备
+- harbor私有仓库账户密码
+- 配置文件中所需要的二进制文件与docker镜像文件
 ## 配置文件说明
 ```yaml
 # false/false  记得区分大小写
