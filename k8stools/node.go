@@ -9,7 +9,7 @@ import (
 )
 
 // InstallK8sNode 安装k8s node
-func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, proxyMode, pauseImage string, ws *sync.WaitGroup) {
+func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, proxyMode, pauseImage, clusterDNSDomain string, ws *sync.WaitGroup) {
 	log.Info(ip + pwd)
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
@@ -136,6 +136,10 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 	}
 	// 修改配置kubelet-config.yaml
 	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /opt/kubernetes/cfg/kubelet-config.yaml")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("sed -i 's/CLUSTER_DNS_DOMAIN/" + clusterDNSDomain + "/g' /opt/kubernetes/cfg/kubelet-config.yaml")
 	if err != nil {
 		log.Error(err)
 	}

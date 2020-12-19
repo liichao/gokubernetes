@@ -3,6 +3,7 @@
   "exec-opts": ["native.cgroupdriver=cgroupfs"],
   "registry-mirrors": ["https://docker.mirrors.ustc.edu.cn", "http://hub-mirror.c.163.com"],
   "max-concurrent-downloads": 10,
+  "insecure-registries":["HarborURL"],
   "log-driver": "json-file",
   "log-level": "warn",
   "log-opts": {

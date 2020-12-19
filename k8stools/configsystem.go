@@ -202,3 +202,87 @@ func InstallChrony(ip, pwd, ntpserver, k8spath string, ws *sync.WaitGroup) {
 		log.Info(err)
 	}
 }
+
+// RepirIptables 将iptables升级到指定版本
+func RepirIptables(ip, pwd, k8spath, iptablesBinName string, ws *sync.WaitGroup) {
+	log.Info("开始配置" + ip + "地址...")
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	// 当命令执行完成后关闭
+	defer c.Close()
+	// 分发iptables 安装包
+	err = c.Upload(k8spath+"tools/"+iptablesBinName, "/tmp/")
+	if err != nil {
+		log.Info(err)
+	}
+	// 安装依赖
+	err = c.Exec("yum install -y gcc make libnftnl-devel libmnl-devel autoconf automake libtool bison flex  libnetfilter_conntrack-devel libnetfilter_queue-devel libpcap-devel")
+	if err != nil {
+		log.Info(err)
+	}
+	// 对该编译二进制
+	// 获取解压文件夹名字
+	binName := strings.Split(iptablesBinName, `.tar`)[0]
+	err = c.Exec("cd /tmp/ && export LC_ALL=C && tar -xvf " + iptablesBinName + " && cd " + binName + " &&  ./autogen.sh")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Exec("cd /tmp/" + binName + "  && ./configure")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Exec("cd /tmp/" + binName + "  && make -j4")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Exec("cd /tmp/" + binName + "  && make install")
+	if err != nil {
+		log.Info(err)
+	}
+	// 创建永久软件
+	linkName := []string{"ip6tables", "ip6tables-restore", "ip6tables-save", "iptables", "iptables-restore", "iptables-save"}
+	// for _, name := range linkName {
+	// 	err = c.Exec("ln -s /usr/local/sbin/xtables-multi /usr/local/sbin/" + name)
+	// 	if err != nil {
+	// 		log.Info(err)
+	// 	}
+	// }
+	// 应用到正式系统 覆盖掉/sbin/下的相关文件
+	for _, name := range linkName {
+		err = c.Exec("cp -rf  /usr/local/sbin/" + name + " /sbin/" + name)
+		if err != nil {
+			log.Info(err)
+		}
+	}
+	// 重启kubelet和 kube-proxy
+	err = c.Exec("systemctl restart kube-proxy")
+	if err != nil {
+		log.Info(err)
+	}
+	err = c.Exec("systemctl restart kubelet")
+	if err != nil {
+		log.Info(err)
+	}
+}
+
+// ChangeHarborHost 将harbor ip写入到node的hosts 与域名对应
+func ChangeHarborHost(ip, pwd, harborURL, harborIP string, ws *sync.WaitGroup) {
+	log.Info("开始配置" + ip + "地址...")
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	// 当命令执行完成后关闭
+	defer c.Close()
+	//  执行 echo  "域名     ip " >> /etc/hosts
+	shell := "echo '" + harborIP + "    " + harborURL + "'>> /etc/hosts"
+	log.Info(ip + " 执行: " + shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Info(err)
+	}
+}

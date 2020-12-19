@@ -1,20 +1,20 @@
-# true/false  记得区分大小写
+# false/false  记得区分大小写
 # 是否全部安装
 All:
-  true
+  false
 # 相关配置目录
 k8sPath:
   /tmp/k8s/
 # 是否配置系统
 system:
-  true
+  false
 # 系统内核 3或者4
 kernel:
   3
 # 是否安装时间同步服务器
 chrony:
   enable:
-    true
+    false
   ntpServer:
     ntp.aliyun.com
 master:
@@ -28,32 +28,32 @@ password:
 # 是否启用ipvs，默认启用
 proxyMode:
   ipvs
-# 创建证书，如果第二次运行可以改为no 第一次必须true
+# 创建证书，如果第二次运行可以改为no 第一次必须false
 createCert:
-  true
+  false
 # 是否安装etcd
 etcd:
-  true
-# 当为true安装etcd集群 当为false时 删除etcd集群
+  false
+# 当为false安装etcd集群 当为false时 删除etcd集群
 etcdInstall:
-  true
+  false
 # 在node上安装docker
 docker:
-  true
-# 当为true安装docker 当为false时 删除docker
+  false
+# 当为false安装docker 当为false时 删除docker
 dockerInstall:
-  true
+  false
 # docker的离线二进制文件放到k8spath/tools下
 dockerInstalltgz:
   docker-18.09.6.tgz
 # k8s api 安装
 installK8sApi:
-  true
+  false
 removeK8sApi:
   false
 # k8s node 安装
 installK8sNode:
-  true
+  false
 # k8s node 删除
 removeK8sNode:
   false
@@ -72,12 +72,21 @@ nodePortRange:
 # 单个node 允许运行最多pod数
 maxPods:
   88
+# 安装网络插件
+network:
+  install:
+    false
+  loadImage:
+    false
 # 网络模式  vxlan  host-gw 等
 flannelBackend:
   vxlan
 # harbor地址
 harborIP:
-  10.10.76.185
+  private:
+    false
+  IP:
+    10.10.76.185
 harborUrl:
   dzero.com
 # harbor账户
@@ -85,10 +94,67 @@ harborUser:
   admin
 # harbor密码
 harborPwd:
-  harbor12345
+  Harbor12345
+# flanneld 离线docker镜像
+flanneldImageOffline:
+  flanneld-v0.13.0-amd64.docker
 # flannled 镜像地址
 flanneldImage:
   dzero.com/base/flannel:v0.13.0-amd64
+# pause 离线docker镜像
+pauseImageOffline:
+  pause-amd64-3.2.tar
 #  pasuse 镜像地址
 pauseImage:
   dzero.com/base/pause-amd64:3.2
+# 修复iptables版本过低
+repair:
+  iptables:
+    false
+  iptablesBinName:
+    iptables-1.6.2.tar.bz2
+# 集群dns的域名，在kubelet-config.yaml的配置也有这个配置
+clusterDnsDomain:
+  cluster.local.
+# 安装其他增项 默认为安装 
+other:
+  install:
+    true
+  # coredns安装
+  dns:
+    install:
+      true
+    # 是否载入镜像，当为false时候需要载入镜像，并推送到仓库
+    loadImage:
+      true
+    # dnsIP 为svcip的第二个ip
+    dnsIP:
+      10.249.0.2
+    coreDnsImages:
+      dzero.com/base/coredns:1.8.0
+    coredns_offline:
+      coredns_1.8.0.tar
+  metricsserver:
+    install:
+      false
+    loadImage:
+      false
+    metricsServerImages:
+      dzero.com/base/metrics-server-amd64:v0.3.6
+    metricsserver_offline:
+      metrics-server-amd64_v0.3.6.tar
+  # dashboard 安装
+  # dashboard v2.x.x 不依赖于heapster
+  dashboard:
+    install:
+      false
+    loadImage:
+      false
+    dashboardImages:
+      dzero.com/base/dashboard:v2.1.0
+    dashboard_offline:
+      dashboard_v2.0.4.tar
+    metricsscraperImages:
+      dzero.com/base/metrics-scraper:v1.0.6
+    metricsscraper_offline:
+      metrics-scraper_v1.0.6.tar

@@ -133,6 +133,63 @@ func ShellOut(command string) bool {
 		return false
 	}
 	// log.Info(stdout.String())
-	// log.Error(stderr.String())
+	log.Error(stderr.String())
 	return true
 }
+
+// // loadImagesChangeTagPushImages 载入镜像修改镜像tag 推送到仓库
+// func loadImagesChangeTagPushImages(ip, pwd, tar, harborURL, harborUser, harborPwd) {
+// 	// if !tools.Exists(k8spath + "tools/" + config.Get("flanneldImageOffline").(string)) {
+// 	// 	log.Warning(config.Get("flanneldImageOffline").(string) + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
+// 	// 	log.Warning("下载URL : https://github.com/coreos/flannel/releases")
+// 	// }
+// 	// // 判断pause镜像文件是否存在
+// 	// if !tools.Exists(k8spath + "tools/" + config.Get("pauseImageOffline").(string)) {
+// 	// 	log.Info(config.Get("pauseImageOffline").(string) + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
+// 	// }
+// 	// 将镜像包上传到nodeList的第一台之后载入并推送到docker仓库
+// 	c, err := ssh.NewClient(ip, "22", "root", pwd)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	// 当命令执行完成后关闭
+// 	defer c.Close()
+
+// 	imagesOffline := []string{config.Get("pauseImageOffline").(string), config.Get("flanneldImageOffline").(string)}
+// 	for _, images := range imagesOffline {
+// 		// 上传镜像到/tmp目录
+// 		err = c.Upload(k8spath+"tools/"+images, "/tmp/")
+// 		if err != nil {
+// 			log.Info(err)
+// 			log.Error(config.Get("pauseImageOffline").(string) + " 上传" + images + "镜像失败")
+// 		}
+// 		// 载入镜像
+// 		err = c.Exec("docker load -i /tmp/" + images)
+// 		if err != nil {
+// 			log.Error(err)
+// 			log.Error(config.Get("pauseImageOffline").(string) + " 载入" + images + "镜像失败")
+// 		}
+// 	}
+// 	// 修改镜像tag 并推送到docker 仓库
+// 	shell = "docker tag quay.io/coreos/" + strings.Split(config.Get("flanneldImageOffline").(string), ".doc")[0] + " " + flanneldImage
+// 	log.Info(shell)
+// 	err = c.Exec(shell)
+// 	if err != nil {
+// 		log.Error(err)
+// 	}
+// 	// 与仓库建立连接
+// 	shell = "docker login -u " + harborUser + " -p " + harborPwd + " " + harborURL
+// 	log.Info(shell)
+// 	err = c.Exec(shell)
+// 	if err != nil {
+// 		log.Error(err)
+// 	}
+// 	err = c.Exec("docker push " + flanneldImage)
+// 	if err != nil {
+// 		log.Error(err)
+// 	}
+// 	err = c.Exec("docker push " + pauseImage)
+// 	if err != nil {
+// 		log.Error(err)
+// 	}
+// }

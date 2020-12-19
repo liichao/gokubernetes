@@ -18,7 +18,7 @@ cgroupDriver: cgroupfs
 cgroupsPerQOS: true
 clusterDNS:
 - CLUSTER_DNS_SVC_IP
-clusterDomain: cluster.local.
+clusterDomain: CLUSTER_DNS_DOMAIN
 configMapAndSecretChangeDetectionStrategy: Watch
 containerLogMaxFiles: 3 
 containerLogMaxSize: 10Mi

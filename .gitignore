@@ -10,6 +10,12 @@ config/tools/etcd.tar.gz
 config/tools/docker-18.09.6.tgz
 config/tools/cni-plugins-linux-amd64-v0.9.0.tgz
 config/tools/flanneld-v0.13.0-amd64.docker
+config/tools/iptables-1.6.2.tar.bz2
+config/tools/pause-amd64-3.2.tar
+config/tools/coredns_1.8.0.tar
+config/tools/dashboard_v2.0.4.tar
+config/tools/metrics-scraper_v1.0.6.tar
+config/tools/metrics-server-amd64_v0.3.6.tar
 # tools/
 .vscode/
 .DS_Sotre

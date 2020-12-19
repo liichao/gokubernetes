@@ -24,3 +24,7 @@ tools工具包中的文件与下载地址
     https://github.com/containernetworking/plugins/releases
 flannel
     https://github.com/coreos/flannel/releases
+#### 相关docker镜像
+    docker pull mirrorgooglecontainers/metrics-server-amd64:v0.3.6
+    docker pull coredns/coredns:1.8.0
+    docker pull kubernetesui/dashboard:v2.1.0
