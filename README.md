@@ -2,8 +2,12 @@
 用golang编写一个 一键部署k8s集群，并用来学习golang
 
 ## 前期准备
+- 系统版本
+    Linux localhost.localdomain 3.10.0-1160.el7.x86_64 #1 SMP Mon Oct 19 16:18:59 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
 - harbor私有仓库账户密码
 - 配置文件中所需要的二进制文件与docker镜像文件
+## 配置目录
+
 ## 配置文件说明
 ```yaml
 # false/false  记得区分大小写
