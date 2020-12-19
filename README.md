@@ -7,7 +7,7 @@
 - harbor私有仓库账户密码
 - 配置文件中所需要的二进制文件与docker镜像文件
 ## 配置目录
-
+![整个程序目录](https://github.com/liichao/gokubernetes/blob/main/images/FileTree.jpg)
 ## 配置文件说明
 ```yaml
 # false/false  记得区分大小写
