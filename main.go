@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -136,7 +135,7 @@ func main() {
 	// 相关文件
 	confLists := []string{"cni-default.conf", "10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
 	certFileLists := []string{"kubelet-csr.json", "kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
-	yamlFileLists := []string{"coredns.yaml", "kube-flannel-vxlan.yaml", "kube-flannel.yaml", "read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
+	yamlFileLists := []string{"read-user-sa-rbac.yaml", "kubernetes-dashboard.yaml", "admin-user-sa-rbac.yaml", "metrics-server.yaml", "coredns.yaml", "kube-flannel-vxlan.yaml", "kube-flannel.yaml", "read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
 	serviceFileLists := []string{"kubelet.service", "kube-proxy.service", "kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
 	toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube", "etcd.tar.gz", "cni-plugins-linux-amd64-v0.9.0.tgz", "flanneld-v0.13.0-amd64.docker", "xtables-multi-iptables-1.6.2"}
 	log.Info(certFileLists)
@@ -453,8 +452,16 @@ func main() {
 					log.Error(config.Get("pauseImageOffline").(string) + " 载入" + images + "镜像失败")
 				}
 			}
-			// 修改镜像tag 并推送到docker 仓库
-			shell = "docker tag quay.io/coreos/" + strings.Split(config.Get("flanneldImageOffline").(string), ".doc")[0] + " " + flanneldImage
+			// 修改镜像flannel tag 并推送到docker 仓库
+			//shell = "docker tag quay.io/coreos/" + strings.Split(config.Get("flanneldImageOffline").(string), ".doc")[0] + " " + flanneldImage
+			shell = "docker tag $(docker images |grep flannel |head -n 1 |awk '{print $3}')" + " " + flanneldImage
+			log.Info(shell)
+			err = c.Exec(shell)
+			if err != nil {
+				log.Error(err)
+			}
+			// 修改pause 镜像tag  并推送到仓库
+			shell = "docker tag $(docker images |grep pause-amd64 |head -n 1 |awk '{print $3}')" + " " + pauseImage
 			log.Info(shell)
 			err = c.Exec(shell)
 			if err != nil {
@@ -528,47 +535,10 @@ func main() {
 			//判断是否需要载入镜像
 			if config.Get("other.dns.loadImage").(bool) {
 				cordnsTar := config.Get("other.dns.coredns_offline").(string)
-				// 判断coredns_1.8.0.tar镜像文件是否存在
-				if !tools.Exists(k8spath + "tools/" + cordnsTar) {
-					log.Info(cordnsTar + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
-				}
-				// 建立ssh将镜像包上传到nodeList的第一台之后载入并推送到docker仓库
-				c, err := ssh.NewClient(nodeIPList.Front().Value.(string), "22", "root", password)
-				if err != nil {
-					panic(err)
-				}
-				// 当命令执行完成后关闭
-				defer c.Close()
-				// 上传cordns tar到node的第一台机器
-				err = c.Upload(k8spath+"tools/"+cordnsTar, "/tmp/")
-				if err != nil {
-					log.Info(err)
-					log.Error(" 上传" + cordnsTar + "镜像失败")
-				}
-				// 载入镜像
-				err = c.Exec("docker load -i /tmp/" + cordnsTar)
-				if err != nil {
-					log.Error(err)
-					log.Error(" 载入" + cordnsTar + "镜像失败")
-				}
-				// 修改镜像tag 并推送到docker 仓库
-				shell = "docker tag coredns/" + strings.Split(coreDNSImages, "base/")[1] + " " + coreDNSImages
-				log.Info(shell)
-				err = c.Exec(shell)
-				if err != nil {
-					log.Error(err)
-				}
-				// 与仓库建立连接
-				shell = "docker login -u " + harborUser + " -p " + harborPwd + " " + harborURL
-				log.Info(shell)
-				err = c.Exec(shell)
-				if err != nil {
-					log.Error(err)
-				}
-				//推送到仓库
-				err = c.Exec("docker push " + coreDNSImages)
-				if err != nil {
-					log.Error(err)
+				// 判断metricsserver_offline镜像文件是否存在
+				loadImages := tools.LoadImagesChangeTagPushImages(nodeIPList.Front().Value.(string), password, k8spath, harborURL, harborUser, harborPwd, cordnsTar, coreDNSImages, "coredns")
+				if loadImages {
+					log.Info(cordnsTar + "镜像导入完成")
 				}
 			}
 			shell := "sed -i 's%CLUSTER_DNS_SVC_IP%" + config.Get("other.dns.dnsIP").(string) + "%g' " + k8spath + "yaml/coredns.yaml"
@@ -597,6 +567,80 @@ func main() {
 			// 输出创建结果
 			shell = k8spath + "tools/hyperkube kubectl get pod -o wide -n kube-system"
 			log.Info("查看CoreDNS创建状态 " + shell)
+		}
+		// 判断是否安装metricsserver
+		if config.Get("other.metricsserver.install").(bool) {
+			metricsServerImages := config.Get("other.metricsserver.metricsServerImages").(string)
+			metricsserverOffline := config.Get("other.metricsserver.metricsserver_offline").(string)
+			// 判断是否需要载入镜像
+			if config.Get("other.metricsserver.loadImage").(bool) {
+				// 判断metricsserver_offline镜像文件是否存在
+				loadImages := tools.LoadImagesChangeTagPushImages(nodeIPList.Front().Value.(string), password, k8spath, harborURL, harborUser, harborPwd, metricsserverOffline, metricsServerImages, "metrics-server")
+				if loadImages {
+					log.Info(metricsserverOffline + "镜像导入完成")
+				}
+			}
+			// 替换yaml镜像地址
+			shell = "sed -i 's%metricsServerImages%" + metricsServerImages + "%g' " + k8spath + "yaml/metrics-server.yaml"
+			log.Info("替换镜像地址 " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("替换镜像地址失败!!!")
+			}
+			// 创建metrics-server
+			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/metrics-server.yaml"
+			log.Info("创建metrics-server " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("创建metrics-server!!!")
+			}
+		}
+		// 判断是否安装dashboard
+		if config.Get("other.dashboard.install").(bool) {
+			// todo-list
+			dashboardImages := config.Get("other.dashboard.dashboardImages").(string)
+			dashboardOffline := config.Get("other.dashboard.dashboard_offline").(string)
+			metricsscraperImages := config.Get("other.dashboard.metricsscraperImages").(string)
+			metricsscraperOffline := config.Get("other.dashboard.metricsscraper_offline").(string)
+			log.Info("aaaa")
+			// 判断是否需要载入镜像
+			if config.Get("other.dashboard.loadImage").(bool) {
+				// 判断dashboardOffline镜像文件是否存在
+				loadImages := tools.LoadImagesChangeTagPushImages(nodeIPList.Front().Value.(string), password, k8spath, harborURL, harborUser, harborPwd, dashboardOffline, dashboardImages, "dashboard")
+				if loadImages {
+					log.Info(dashboardOffline + "镜像导入完成")
+				}
+				// 判断metricsscraperImages镜像文件是否存在
+				loadImages = tools.LoadImagesChangeTagPushImages(nodeIPList.Front().Value.(string), password, k8spath, harborURL, harborUser, harborPwd, metricsscraperOffline, metricsscraperImages, "metrics-scraper")
+				if loadImages {
+					log.Info(metricsscraperOffline + "镜像导入完成")
+				}
+			}
+			// 替换yaml镜像地址
+			shell = "sed -i 's%metricsscraperImages%" + metricsscraperImages + "%g' " + k8spath + "yaml/kubernetes-dashboard.yaml"
+			log.Info("替换镜像地址 " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("替换镜像地址失败!!!")
+			}
+			shell = "sed -i 's%dashboardImages%" + dashboardImages + "%g' " + k8spath + "yaml/kubernetes-dashboard.yaml"
+			log.Info("替换镜像地址 " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("替换镜像地址失败!!!")
+			}
+			// 创建dashborad
+			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/admin-user-sa-rbac.yaml"
+			log.Info("创建admin-user-sa-rbac " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("创建admin-user-sa-rbac!!!")
+			}
+			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/read-user-sa-rbac.yaml"
+			log.Info("创建read-user-sa-rbac " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("创建read-user-sa-rbac!!!")
+			}
+			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/kubernetes-dashboard.yaml"
+			log.Info("创建kubernetes-dashboard " + shell)
+			if !tools.ShellOut(shell) {
+				log.Error("创建kubernetes-dashboard!!!")
+			}
 		}
 	}
 }

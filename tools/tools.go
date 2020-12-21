@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/op/go-logging"
+	"github.com/pytool/ssh"
 )
 
 // 定义日志格式
@@ -117,6 +118,7 @@ func Exists(path string) bool {
 // 	}
 // 	return false
 // }
+
 // ShellToUse 定义shell使用bash
 const ShellToUse = "bash"
 
@@ -137,59 +139,69 @@ func ShellOut(command string) bool {
 	return true
 }
 
-// // loadImagesChangeTagPushImages 载入镜像修改镜像tag 推送到仓库
-// func loadImagesChangeTagPushImages(ip, pwd, tar, harborURL, harborUser, harborPwd) {
-// 	// if !tools.Exists(k8spath + "tools/" + config.Get("flanneldImageOffline").(string)) {
-// 	// 	log.Warning(config.Get("flanneldImageOffline").(string) + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
-// 	// 	log.Warning("下载URL : https://github.com/coreos/flannel/releases")
-// 	// }
-// 	// // 判断pause镜像文件是否存在
-// 	// if !tools.Exists(k8spath + "tools/" + config.Get("pauseImageOffline").(string)) {
-// 	// 	log.Info(config.Get("pauseImageOffline").(string) + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
-// 	// }
-// 	// 将镜像包上传到nodeList的第一台之后载入并推送到docker仓库
-// 	c, err := ssh.NewClient(ip, "22", "root", pwd)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	// 当命令执行完成后关闭
-// 	defer c.Close()
+// LoadImagesChangeTagPushImages 载入镜像修改镜像tag 推送到仓库
+/*
+ip 执行这个的服务器ip
 
-// 	imagesOffline := []string{config.Get("pauseImageOffline").(string), config.Get("flanneldImageOffline").(string)}
-// 	for _, images := range imagesOffline {
-// 		// 上传镜像到/tmp目录
-// 		err = c.Upload(k8spath+"tools/"+images, "/tmp/")
-// 		if err != nil {
-// 			log.Info(err)
-// 			log.Error(config.Get("pauseImageOffline").(string) + " 上传" + images + "镜像失败")
-// 		}
-// 		// 载入镜像
-// 		err = c.Exec("docker load -i /tmp/" + images)
-// 		if err != nil {
-// 			log.Error(err)
-// 			log.Error(config.Get("pauseImageOffline").(string) + " 载入" + images + "镜像失败")
-// 		}
-// 	}
-// 	// 修改镜像tag 并推送到docker 仓库
-// 	shell = "docker tag quay.io/coreos/" + strings.Split(config.Get("flanneldImageOffline").(string), ".doc")[0] + " " + flanneldImage
-// 	log.Info(shell)
-// 	err = c.Exec(shell)
-// 	if err != nil {
-// 		log.Error(err)
-// 	}
-// 	// 与仓库建立连接
-// 	shell = "docker login -u " + harborUser + " -p " + harborPwd + " " + harborURL
-// 	log.Info(shell)
-// 	err = c.Exec(shell)
-// 	if err != nil {
-// 		log.Error(err)
-// 	}
-// 	err = c.Exec("docker push " + flanneldImage)
-// 	if err != nil {
-// 		log.Error(err)
-// 	}
-// 	err = c.Exec("docker push " + pauseImage)
-// 	if err != nil {
-// 		log.Error(err)
-// 	}
-// }
+pwd 密码
+
+k8spath 程序释放目录
+
+harborURL  仓库url
+
+harborUser  仓库账户
+
+harborPwd  仓库密码
+
+imagesOfflineTar docker镜像tar包
+
+ImagesTag 模糊查询关键字，通过该关键字定位到docker镜像并生产新仓库的镜像images
+*/
+func LoadImagesChangeTagPushImages(ip, pwd, k8spath, harborURL, harborUser, harborPwd, imagesOfflineTar, harborImagesURL, ImagesTag string) bool {
+	// 判断pause镜像文件是否存在
+	if !Exists(k8spath + "tools/" + imagesOfflineTar) {
+		log.Info(imagesOfflineTar + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
+	}
+	// 将镜像包上传到nodeList的第一台之后载入并推送到docker仓库
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	// 当命令执行完成后关闭
+	defer c.Close()
+	// 上传metricsServerImages tar到node的第一台机器
+	err = c.Upload(k8spath+"tools/"+imagesOfflineTar, "/tmp/")
+	if err != nil {
+		log.Info(err)
+		log.Error(" 上传" + imagesOfflineTar + "镜像失败")
+		return false
+	}
+	// 载入镜像
+	err = c.Exec("docker load -i /tmp/" + imagesOfflineTar)
+	if err != nil {
+		log.Error(err)
+		log.Error(" 载入" + imagesOfflineTar + "镜像失败")
+		return false
+	}
+	// 更改镜像tag
+	shell := "docker tag $(docker images |grep " + ImagesTag + " |head -n 1 |awk '{print $3}')" + " " + harborImagesURL
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	// 与仓库建立连接
+	shell = "docker login -u " + harborUser + " -p " + harborPwd + " " + harborURL
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+	}
+	//推送到仓库
+	err = c.Exec("docker push " + harborImagesURL)
+	if err != nil {
+		log.Error(err)
+	}
+	return true
+}
