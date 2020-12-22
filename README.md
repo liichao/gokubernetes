@@ -174,12 +174,12 @@ other:
 
 ### 待完成
     紧急处理清理功能
-    - 处理yaml文件中添加私有证书
-    - 需要处理config.yaml是否应该存在的问题。释放还是？？？一直保存
+    - 将docker更换container
+    - 测试1.18和1.19和1.20的k8s安装
+    - 后期规划服务网格 一键安装
     - ipvs 负载均衡master后期在做
     - 关于masterip这边临时取了第一个masterip为apiserverip
-    - 将docker更换container
-    - 后期规划服务网格 一键安装
+
 
 ### 注意事项
 如果重新生成证书，请从etcd开始重新生成。以免导致k8sapi服务因证书原因导致无法链接到etcd
