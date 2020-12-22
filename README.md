@@ -3,7 +3,7 @@
 
 ## 前期准备
 - 系统版本
-    Linux localhost.localdomain 3.10.0-1160.el7.x86_64 #1 SMP Mon Oct 19 16:18:59 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
+    Centos 7.6 内核版本4.14
 - harbor私有仓库账户密码
 - 配置文件中所需要的二进制文件与docker镜像文件
 ## 配置目录
