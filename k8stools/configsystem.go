@@ -269,7 +269,7 @@ func RepirIptables(ip, pwd, k8spath, iptablesBinName string, ws *sync.WaitGroup)
 }
 
 // ChangeHarborHost 将harbor ip写入到node的hosts 与域名对应
-func ChangeHarborHost(ip, pwd, harborURL, harborIP string, ws *sync.WaitGroup) {
+func ChangeHarborHost(ip, pwd, harborURL, harborIP, harborUser, harborPwd, pauseImage string, ws *sync.WaitGroup) {
 	log.Info("开始配置" + ip + "地址...")
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
@@ -280,6 +280,19 @@ func ChangeHarborHost(ip, pwd, harborURL, harborIP string, ws *sync.WaitGroup) {
 	defer c.Close()
 	//  执行 echo  "域名     ip " >> /etc/hosts
 	shell := "echo '" + harborIP + "    " + harborURL + "'>> /etc/hosts"
+	log.Info(ip + " 执行: " + shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Info(err)
+	}
+	// 与仓库建立连接
+	shell = "docker login -u " + harborUser + " -p " + harborPwd + " " + harborURL
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+	}
+	shell = "docker pull '" + pauseImage
 	log.Info(ip + " 执行: " + shell)
 	err = c.Exec(shell)
 	if err != nil {

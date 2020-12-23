@@ -129,3 +129,14 @@ func RemoveDocker(ip, pwd string, ws *sync.WaitGroup) {
 	}
 	log.Info("Remove docker Service Done.")
 }
+
+// LoginDockerHarbor 每个node节点都登陆一下harbor仓库
+func LoginDockerHarbor(ip, pwd, harborURL, harborPwd, harborUser string, ws *sync.WaitGroup) {
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+
+}

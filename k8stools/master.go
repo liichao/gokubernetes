@@ -65,6 +65,8 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Info(err)
 	}
+	// 上传完成后等待10秒
+	time.Sleep(10 * time.Second)
 	log.Info(ip + "chmod 0755 /opt/kubernetes/bin/* 赋权")
 	shell := "chmod 0755 /opt/kubernetes/bin/*"
 	log.Info(shell)
@@ -86,6 +88,8 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 			log.Info(err)
 		}
 	}
+	// 上传完成后等待10秒
+	time.Sleep(10 * time.Second)
 	// 修改config配置
 	err = c.Exec("sed -i 's/inventory_hostname/" + ip + "/g' /opt/kubernetes/cfg/kubernetes-csr.json")
 	if err != nil {

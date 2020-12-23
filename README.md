@@ -173,7 +173,9 @@ other:
 ```
 
 ### 待完成
+  要先传文件在执行后续相关内容，在yum update之前
   添加各种命令判断功能
+  每台机器需要都docker login 一下
     紧急处理清理功能
     - 删除node里面有个危险操作，待修改
     - 将docker更换container

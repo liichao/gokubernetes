@@ -198,7 +198,17 @@ func main() {
 	}
 	// 创建并发
 	var wg sync.WaitGroup
+	// 分发bin二进制文件与所有相关的证书文件等。
+	wg.Add(allIPList.Len())
+	for ip := allIPList.Front(); ip != nil; ip = ip.Next() {
+		log.Info(ip.Value.(string))
+		// go k8stools.SendBinFile(ip.Value.(string), password, proxyMode, k8spath, kernel, &wg)
+	}
+	wg.Wait()
+	log.Info("所有主机均已配置完成.")
 	log.Info("判断系统参数配置是否启用...")
+	log.Info("所有文件分发完成请确认")
+	time.Sleep(10 * time.Second)
 	if system {
 		log.Info("开始配置系统参数...")
 		wg.Add(allIPList.Len())
@@ -209,7 +219,7 @@ func main() {
 		wg.Wait()
 		log.Info("所有主机均已配置完成.")
 		log.Info("系统参数配置完成.请确认，如有问题请ctrl+C结束进程，之后修改配置文件system配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断时钟参数配置是否启用...")
 	if chrony {
@@ -222,14 +232,14 @@ func main() {
 		wg.Wait()
 		log.Info("所有主机安装chrony服务完成")
 		log.Info("安装时间同步服务器完成，如有问题请ctrl+C结束进程，之后修改配置文件chrony配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断是否要创建证书...")
 	if createCert {
 		log.Info(" 开始在当前主机创建相关证书...")
 		k8stools.CreateCert(k8spath, apiServer)
 		log.Info("创建证书完成，如有问题请ctrl+C结束进程，之后修改配置文件createCert配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断是否安装etcd集群...")
 	if etcd {
@@ -300,7 +310,7 @@ func main() {
 			log.Info("ETCD全部卸载完成.")
 		}
 		log.Info("创建etcd集群，如有问题请ctrl+C结束进程，之后修改配置文件etcdInstall配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断给node节点安装docker...")
 	if docker {
@@ -334,7 +344,7 @@ func main() {
 			log.Info("Docker卸载完成.")
 		}
 		log.Info("创建Docker完成，如有问题请ctrl+C结束进程，之后修改配置文件docker配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断是否安装k8s Master服务...")
 	if config.Get("installK8sApi").(bool) {
@@ -371,7 +381,7 @@ func main() {
 			log.Error(err)
 		}
 		log.Info("创建k8s api集群完成，如有问题请ctrl+C结束进程，之后修改配置文件installK8sApi配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断是否删除远程api服务...")
 	if config.Get("removeK8sApi").(bool) {
@@ -383,7 +393,7 @@ func main() {
 		wg.Wait()
 		log.Info("k8s 删除完成.")
 		log.Info("卸载k8s api集群完成，如有问题请ctrl+C结束进程，之后修改配置文件removeK8sApi配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断是否安装k8s Node服务...")
 	if config.Get("installK8sNode").(bool) {
@@ -395,7 +405,7 @@ func main() {
 		wg.Wait()
 		log.Info("k8s node kubelet kube-proxy组件安装完成.")
 		log.Info("创建k8s node完成，如有问题请ctrl+C结束进程，之后修改配置文件installK8sNode配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	log.Info("判断是否卸载k8s Node服务...")
 	if config.Get("removeK8sNode").(bool) {
@@ -437,7 +447,7 @@ func main() {
 		if config.Get("harborIP.private").(bool) {
 			wg.Add(nodeIPList.Len())
 			for ip := nodeIPList.Front(); ip != nil; ip = ip.Next() {
-				go k8stools.ChangeHarborHost(ip.Value.(string), password, config.Get("harborUrl").(string), config.Get("harborIP.IP").(string), &wg)
+				go k8stools.ChangeHarborHost(ip.Value.(string), password, config.Get("harborUrl").(string), config.Get("harborIP.IP").(string), harborUser, harborPwd, pauseImage, &wg)
 			}
 			wg.Wait()
 			log.Info("所有node的hosts都修改完成.")
@@ -550,7 +560,7 @@ func main() {
 			}
 		}
 		log.Info("创建flannled完成，如有问题请ctrl+C结束进程，之后修改配置文件network.install配置为flase")
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	// 安装其他相关插件
 	// 判断是否安装其它插件
