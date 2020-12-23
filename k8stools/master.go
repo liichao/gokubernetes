@@ -2,6 +2,7 @@ package k8stools
 
 import (
 	"sync"
+	"time"
 
 	myTools "go-install-kubernetes/tools"
 
@@ -101,6 +102,17 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Error(err)
 	}
+	// 判断文件是否创建 为创建直接退出
+	filecheck, err := c.FileExist("/opt/kubernetes/cfg/kubernetes.pem")
+	if err != nil || !filecheck {
+		log.Info("kubernetes.pem和kubernetes-key.pem 创建完成")
+	} else {
+		log.Error(err)
+		log.Error(filecheck)
+		time.Sleep(60 * time.Second)
+		log.Info("这条命令在" + ip + "这台机器上执行报错了，" + shell + "请检查，并在一分钟内完成执行手动执行。")
+	}
+
 	// 创建 aggregator proxy证书签名请求
 	shell = "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes aggregator-proxy-csr.json |  /opt/kubernetes/bin/cfssljson -bare aggregator-proxy"
 	log.Info(ip + shell)
@@ -110,6 +122,16 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	err = c.Exec(shell)
 	if err != nil {
 		log.Error(err)
+	}
+	// 判断文件是否创建 为创建直接退出
+	filecheck, err = c.FileExist("/opt/kubernetes/cfg/aggregator-proxy.pem")
+	if err != nil || !filecheck {
+		log.Info("aggregator-proxy.aggregator-proxy-key.pem 创建完成")
+	} else {
+		log.Error(err)
+		log.Error(filecheck)
+		time.Sleep(60 * time.Second)
+		log.Info("这条命令在" + ip + "这台机器上执行报错了，" + shell + "请检查，并在一分钟内完成执行手动执行。")
 	}
 	// 分发service文件
 	service := []string{"kube-apiserver.service", "kube-controller-manager.service", "kube-scheduler.service"}

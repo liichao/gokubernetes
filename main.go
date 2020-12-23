@@ -137,7 +137,7 @@ func main() {
 	certFileLists := []string{"kubelet-csr.json", "kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	yamlFileLists := []string{"read-user-sa-rbac.yaml", "kubernetes-dashboard.yaml", "admin-user-sa-rbac.yaml", "metrics-server.yaml", "coredns.yaml", "kube-flannel-vxlan.yaml", "kube-flannel.yaml", "read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
 	serviceFileLists := []string{"kubelet.service", "kube-proxy.service", "kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
-	toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube", "etcd.tar.gz", "cni-plugins-linux-amd64-v0.9.0.tgz", "flanneld-v0.13.0-amd64.docker", "xtables-multi-iptables-1.6.2"}
+	toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube", "etcd.tar.gz", "cni-plugins-linux-amd64-v0.9.0.tgz", "flanneld-v0.13.0-amd64.docker", "iptables-1.6.2.tar.bz2"}
 	log.Info(certFileLists)
 	log.Info(yamlFileLists)
 	log.Info(serviceFileLists)
@@ -188,6 +188,14 @@ func main() {
 	if !tools.ShellOut(shell) {
 		log.Error("替换harborURL失败")
 	}
+	// 判断pause镜像文件是否存在
+	if !tools.Exists(k8spath + "tools/" + config.Get("cnitools").(string)) {
+		log.Info(config.Get("cnitools").(string) + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
+	}
+	//解压
+	if !tools.ShellOut("cd " + k8spath + "/tools && tar -zxf " + config.Get("cnitools").(string)) {
+		log.Error("解压" + config.Get("cnitools").(string) + "失败")
+	}
 	// 创建并发
 	var wg sync.WaitGroup
 	log.Info("判断系统参数配置是否启用...")
@@ -200,6 +208,8 @@ func main() {
 		}
 		wg.Wait()
 		log.Info("所有主机均已配置完成.")
+		log.Info("系统参数配置完成.请确认，如有问题请ctrl+C结束进程，之后修改配置文件system配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断时钟参数配置是否启用...")
 	if chrony {
@@ -211,11 +221,15 @@ func main() {
 		}
 		wg.Wait()
 		log.Info("所有主机安装chrony服务完成")
+		log.Info("安装时间同步服务器完成，如有问题请ctrl+C结束进程，之后修改配置文件chrony配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断是否要创建证书...")
 	if createCert {
 		log.Info(" 开始在当前主机创建相关证书...")
 		k8stools.CreateCert(k8spath, apiServer)
+		log.Info("创建证书完成，如有问题请ctrl+C结束进程，之后修改配置文件createCert配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断是否安装etcd集群...")
 	if etcd {
@@ -285,6 +299,8 @@ func main() {
 			wg.Wait()
 			log.Info("ETCD全部卸载完成.")
 		}
+		log.Info("创建etcd集群，如有问题请ctrl+C结束进程，之后修改配置文件etcdInstall配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断给node节点安装docker...")
 	if docker {
@@ -317,6 +333,8 @@ func main() {
 			wg.Wait()
 			log.Info("Docker卸载完成.")
 		}
+		log.Info("创建Docker完成，如有问题请ctrl+C结束进程，之后修改配置文件docker配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断是否安装k8s Master服务...")
 	if config.Get("installK8sApi").(bool) {
@@ -352,6 +370,8 @@ func main() {
 		if err != nil {
 			log.Error(err)
 		}
+		log.Info("创建k8s api集群完成，如有问题请ctrl+C结束进程，之后修改配置文件installK8sApi配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断是否删除远程api服务...")
 	if config.Get("removeK8sApi").(bool) {
@@ -362,6 +382,8 @@ func main() {
 		}
 		wg.Wait()
 		log.Info("k8s 删除完成.")
+		log.Info("卸载k8s api集群完成，如有问题请ctrl+C结束进程，之后修改配置文件removeK8sApi配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断是否安装k8s Node服务...")
 	if config.Get("installK8sNode").(bool) {
@@ -372,6 +394,8 @@ func main() {
 		}
 		wg.Wait()
 		log.Info("k8s node kubelet kube-proxy组件安装完成.")
+		log.Info("创建k8s node完成，如有问题请ctrl+C结束进程，之后修改配置文件installK8sNode配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	log.Info("判断是否卸载k8s Node服务...")
 	if config.Get("removeK8sNode").(bool) {
@@ -525,6 +549,8 @@ func main() {
 				log.Error("创建 flannled失败!!!")
 			}
 		}
+		log.Info("创建flannled完成，如有问题请ctrl+C结束进程，之后修改配置文件network.install配置为flase")
+		time.Sleep(30 * time.Second)
 	}
 	// 安装其他相关插件
 	// 判断是否安装其它插件

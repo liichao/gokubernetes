@@ -230,6 +230,7 @@ func RemoveK8sNode(ip, pwd string, ws *sync.WaitGroup) {
 			log.Error(err)
 		}
 	}
+	// 危险操作 待修改
 	err = c.Exec("rm -rf /opt/kubernetes/cfg")
 	if err != nil {
 		log.Error(err)

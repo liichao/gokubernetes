@@ -7,20 +7,20 @@ k8sPath:
   /tmp/k8s/
 # 是否配置系统
 system:
-  false
+  true
 # 系统内核 3或者4
 kernel:
-  3
+  4
 # 是否安装时间同步服务器
 chrony:
   enable:
-    false
+    true
   ntpServer:
     ntp.aliyun.com
 master:
   10.10.77.191-193
 node:
-  10.10.77.194-196
+  10.10.77.191-196
 apiServer:
   10.10.77.191
 password:
@@ -30,30 +30,30 @@ proxyMode:
   ipvs
 # 创建证书，如果第二次运行可以改为no 第一次必须false
 createCert:
-  false
+  true
 # 是否安装etcd
 etcd:
-  false
-# 当为false安装etcd集群 当为false时 删除etcd集群
+  true
+# 当为true安装etcd集群 当为false时 删除etcd集群
 etcdInstall:
-  false
+  true
 # 在node上安装docker
 docker:
-  false
-# 当为false安装docker 当为false时 删除docker
+  true
+# 当为true安装docker 当为false时 删除docker
 dockerInstall:
-  false
+  true
 # docker的离线二进制文件放到k8spath/tools下
 dockerInstalltgz:
   docker-18.09.6.tgz
 # k8s api 安装
 installK8sApi:
-  false
+  true
 removeK8sApi:
   false
 # k8s node 安装
 installK8sNode:
-  false
+  true
 # k8s node 删除
 removeK8sNode:
   false
@@ -72,19 +72,22 @@ nodePortRange:
 # 单个node 允许运行最多pod数
 maxPods:
   88
+# cni网络
+cnitools:
+  cni-plugins-linux-amd64-v0.9.0.tgz
 # 安装网络插件
 network:
   install:
-    false
+    true
   loadImage:
-    false
+    true
 # 网络模式  vxlan  host-gw 等
 flannelBackend:
   vxlan
 # harbor地址
 harborIP:
   private:
-    false
+    true
   IP:
     10.10.76.185
 harborUrl:
@@ -136,9 +139,9 @@ other:
       coredns_1.8.0.tar
   metricsserver:
     install:
-      false
+      true
     loadImage:
-      false
+      true
     metricsServerImages:
       dzero.com/base/metrics-server-amd64:v0.3.6
     metricsserver_offline:
@@ -147,9 +150,9 @@ other:
   # dashboard v2.x.x 不依赖于heapster
   dashboard:
     install:
-      false
+      true
     loadImage:
-      false
+      true
     dashboardImages:
       dzero.com/base/dashboard:v2.1.0
     dashboard_offline:
