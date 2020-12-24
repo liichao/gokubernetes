@@ -3,7 +3,6 @@ package main
 import (
 	"container/list"
 	"encoding/json"
-	"fmt"
 	"go-install-kubernetes/k8stools"
 	"go-install-kubernetes/tools"
 	"io/ioutil"
@@ -40,34 +39,7 @@ type EtcdJSONParse struct {
 	} `json:"names"`
 }
 
-// PrintHelpInfo 输出帮助信息
-func PrintHelpInfo() {
-	// 输出帮助命令
-	fmt.Printf("Hi Welcome to use One Key Install kubernests \n")
-	fmt.Printf("Usage: go-install-kubernetes [PARATEMERS]...\n")
-	fmt.Printf(" \n")
-	fmt.Printf("  First parameter\n")
-	fmt.Printf("    Example: go-install-kubernetes system 172.16.0.1-254 123456 ipvs ntpserverip \n")
-	fmt.Printf("    - system: prepare system environment and install vim,net-tools etc \n")
-	fmt.Printf("    - chrony: remove ntp serever install chrony and change the chrony configuration\n")
-	fmt.Printf("    - cert:   create k8s and etcd cert file save to /tmp/k8s/cert/\n")
-	fmt.Printf("  Two parameter\n")
-	fmt.Printf("    - IP addresses        172.16.0.1-10 \n")
-	fmt.Printf("  Three parameter\n")
-	fmt.Printf("    - password            system password \n")
-	fmt.Printf("  Four parameter\n")
-	fmt.Printf("    - ipvs:               proxy mode \n")
-	fmt.Printf("  Five parameter\n")
-	fmt.Printf("    - NTP server IP:      ntp.aliyun.com \n")
-}
-
-/*
-	参数1: 系统配置修改
-	参数2: 服务器ip或者网段
-	参数3: 服务器密码
-	参数4: 启用ipvs
-	参数4: 时间同步服务器
-*/
+// 程序的开始
 func main() {
 	// 读取yaml配置文件
 	config := viper.New()
@@ -99,10 +71,6 @@ func main() {
 		allIPList.PushBack(hostIPSplit + hostStartIPstr)
 		nodeIPList.PushBack(hostIPSplit + hostStartIPstr)
 	}
-	// 循环所有ip
-	// for ip := allIPList.Front(); ip != nil; ip = ip.Next() {
-	// 	log.Info(ip.Value)
-	// }
 	password := config.Get("password").(string)
 	proxyMode := config.Get("proxyMode").(string)
 	createCert := config.Get("createCert").(bool)
@@ -126,12 +94,6 @@ func main() {
 	dockerInstalltgz := config.Get("dockerInstalltgz").(string)
 	clusterDNSDomain := config.Get("clusterDnsDomain").(string)
 	iptablesBinName := config.Get("repair.iptablesBinName").(string)
-	log.Info(flanneldImage)
-	log.Info(harborPwd)
-	log.Info(harborUser)
-	log.Info(harborURL)
-	log.Info(flannelBackend)
-
 	// 相关文件
 	confLists := []string{"cni-default.conf", "10-k8s-modules.conf", "95-k8s-sysctl.conf", "30-k8s-ulimits.conf", "sctp.conf", "server-centos.conf", "daemon.json", "docker"}
 	certFileLists := []string{"kubelet-csr.json", "kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
@@ -683,4 +645,5 @@ func main() {
 			}
 		}
 	}
+	log.Info("所有程序都安全完成，请执行systemctl status kubelet 如Not using `--random-fully` in the MASQUERADE rule for iptables because the local version of iptables does not support it 报错，请将config.yaml false修改为true 在运行修复一下")
 }
