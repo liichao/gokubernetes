@@ -452,7 +452,7 @@ func main() {
 		if config.Get("harborIP.private").(bool) {
 			wg.Add(nodeIPList.Len())
 			for ip := nodeIPList.Front(); ip != nil; ip = ip.Next() {
-				go k8stools.ChangeHarborHost(ip.Value.(string), password, config.Get("harborUrl").(string), config.Get("harborIP.IP").(string), harborUser, harborPwd, pauseImage, &wg)
+				go k8stools.ChangeHarborHost(ip.Value.(string), password, config.Get("harborUrl").(string), config.Get("harborIP.IP").(string), &wg)
 			}
 			wg.Wait()
 			log.Info("所有node的hosts都修改完成.")
@@ -524,7 +524,7 @@ func main() {
 		}
 		wg.Add(nodeIPList.Len())
 		for ip := nodeIPList.Front(); ip != nil; ip = ip.Next() {
-			go k8stools.InstallK8sNetwork(ip.Value.(string), password, k8spath, flannelBackend, &wg)
+			go k8stools.InstallK8sNetwork(ip.Value.(string), password, k8spath, flannelBackend, harborURL, harborUser, harborPwd, pauseImage, &wg)
 		}
 		wg.Wait()
 		log.Info("k8s node kubelet kube-proxy组件安装完成.")

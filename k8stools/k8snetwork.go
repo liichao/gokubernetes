@@ -7,7 +7,7 @@ import (
 )
 
 // InstallK8sNetwork 安装k8s node
-func InstallK8sNetwork(ip, pwd, k8spath, flannelBackend string, ws *sync.WaitGroup) {
+func InstallK8sNetwork(ip, pwd, k8spath, flannelBackend, harborURL, harborUser, harborPwd, pauseImage string, ws *sync.WaitGroup) {
 	log.Info(ip + pwd + flannelBackend)
 	defer ws.Done()
 	c, err := ssh.NewClient(ip, "22", "root", pwd)
@@ -62,4 +62,17 @@ func InstallK8sNetwork(ip, pwd, k8spath, flannelBackend string, ws *sync.WaitGro
 	// if err != nil {
 	// 	log.Info(err)
 	// }
+	// 与仓库建立连接
+	shell = "docker login -u " + harborUser + " -p " + harborPwd + " " + harborURL
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+	}
+	shell = "docker pull " + pauseImage
+	log.Info(ip + " 执行: " + shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Info(err)
+	}
 }
