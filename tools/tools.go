@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/op/go-logging"
 	"github.com/pytool/ssh"
@@ -204,4 +205,46 @@ func LoadImagesChangeTagPushImages(ip, pwd, k8spath, harborURL, harborUser, harb
 		log.Error(err)
 	}
 	return true
+}
+
+// SendBinAndConfigFile 分发指定文件到指定IP上的指定目录上
+/*
+ip  执行这个的服务器ip
+pwd 密码
+sourcePath 源文件
+descPath 目的地址 写死/opt/kubernetes/bin/
+*/
+func SendBinAndConfigFile(ip, pwd, sourcePath, descPath string, listFile []string, ws *sync.WaitGroup) {
+	log.Info(ip + pwd + sourcePath + descPath)
+	defer ws.Done()
+	// 判断源文件是否存在
+	if !Exists(sourcePath) {
+		log.Info(sourcePath + "不存在，请上传")
+	}
+	// 开启远程登陆
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	// 当命令执行完成后关闭
+	defer c.Close()
+	// 上传，并返回结果
+	// 上传metricsServerImages tar到node的第一台机器
+	for _, file := range listFile {
+		err = c.Upload(sourcePath+"tools/"+file, descPath)
+		if err != nil {
+			log.Info(err)
+			log.Error(" 上传" + sourcePath + "tools/" + file + "失败")
+
+		}
+	}
+	// 赋权
+	err = c.Exec("chmod u+x " + descPath + "/*")
+	if err != nil {
+		log.Error(err)
+		log.Error(descPath + "授权失败")
+	}
+	// 检查文件是否存在
+	c.Exec("ls -l " + descPath)
+	log.Info(ip + "所有文件都已经上传完成了.可以去/opt/kubernetes/bin目录下查看下")
 }

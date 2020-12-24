@@ -19,7 +19,8 @@ func ConfigSystem(ip, pwd, proxymode, k8spath string, sysversionint int, ws *syn
 	defer c.Close()
 	// 开始更新系统版本与安装相关必要组件
 	log.Info("开始更新系统版本与安装相关必要组件")
-	c.Exec("yum update -y")
+	//禁用更新系统
+	//c.Exec("yum update -y")
 	err = c.Exec("yum install vim net-tools wget bash-completion conntrack-tools ipset ipvsadm libseccomp nfs-utils psmisc rsync socat -y")
 	if err != nil {
 		log.Info(err)
@@ -292,7 +293,7 @@ func ChangeHarborHost(ip, pwd, harborURL, harborIP, harborUser, harborPwd, pause
 	if err != nil {
 		log.Error(err)
 	}
-	shell = "docker pull '" + pauseImage
+	shell = "docker pull " + pauseImage
 	log.Info(ip + " 执行: " + shell)
 	err = c.Exec(shell)
 	if err != nil {

@@ -49,31 +49,31 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	if err != nil {
 		log.Error(err)
 	}
-	// 拷贝 hyperkube 到主机
-	log.Info(ip + "拷贝hyperkube到/opt/kuberntes/bin/目录")
-	err = c.Upload(k8spath+"tools/hyperkube", "/opt/kubernetes/bin/hyperkube")
-	if err != nil {
-		log.Info(err)
-	}
-	log.Info(ip + "拷贝cfssl到/opt/kuberntes/bin/目录")
-	err = c.Upload(k8spath+"tools/cfssl", "/opt/kubernetes/bin/cfssl")
-	if err != nil {
-		log.Info(err)
-	}
-	log.Info(ip + "拷贝cfssljson到/opt/kuberntes/bin/目录")
-	err = c.Upload(k8spath+"tools/cfssljson", "/opt/kubernetes/bin/cfssljson")
-	if err != nil {
-		log.Info(err)
-	}
+	// 拷贝 hyperkube 到主机 不需要拷贝了 在最开始已经上传
+	// log.Info(ip + "拷贝hyperkube到/opt/kuberntes/bin/目录")
+	// err = c.Upload(k8spath+"tools/hyperkube", "/opt/kubernetes/bin/hyperkube")
+	// if err != nil {
+	// 	log.Info(err)
+	// }
+	// log.Info(ip + "拷贝cfssl到/opt/kuberntes/bin/目录")
+	// err = c.Upload(k8spath+"tools/cfssl", "/opt/kubernetes/bin/cfssl")
+	// if err != nil {
+	// 	log.Info(err)
+	// }
+	// log.Info(ip + "拷贝cfssljson到/opt/kuberntes/bin/目录")
+	// err = c.Upload(k8spath+"tools/cfssljson", "/opt/kubernetes/bin/cfssljson")
+	// if err != nil {
+	// 	log.Info(err)
+	// }
 	// 上传完成后等待10秒
-	time.Sleep(10 * time.Second)
-	log.Info(ip + "chmod 0755 /opt/kubernetes/bin/* 赋权")
-	shell := "chmod 0755 /opt/kubernetes/bin/*"
-	log.Info(shell)
-	err = c.Exec(shell)
-	if err != nil {
-		log.Error(err)
-	}
+	// time.Sleep(10 * time.Second)
+	// log.Info(ip + "chmod 0755 /opt/kubernetes/bin/* 赋权")
+	// shell := "chmod 0755 /opt/kubernetes/bin/*"
+	// log.Info(shell)
+	// err = c.Exec(shell)
+	// if err != nil {
+	// 	log.Error(err)
+	// }
 	// 分发config 可以不分发
 	err = c.Upload("/root/.kube/config", "/root/.kube/config")
 	if err != nil {
@@ -83,10 +83,12 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 	// basic-auth.csv apiserver 基础认证（用户名/密码）配置
 	certList := []string{"basic-auth.csv", "admin.pem", "admin-key.pem", "ca.pem", "ca-key.pem", "ca-config.json", "kube-proxy.kubeconfig", "kube-controller-manager.kubeconfig", "kube-scheduler.kubeconfig", "aggregator-proxy-csr.json"}
 	for _, file := range certList {
+		log.Info("开始上传" + k8spath + "cert/" + file)
 		err = c.Upload(k8spath+"cert/"+file, "/opt/kubernetes/cfg/"+file)
 		if err != nil {
 			log.Info(err)
 		}
+		log.Info(k8spath + "cert/" + file + " 上传完成")
 	}
 	// 上传完成后等待10秒
 	time.Sleep(10 * time.Second)
@@ -96,7 +98,7 @@ func InstallK8sMaster(ip, pwd, k8spath, nodeportrange, svcIP, etcdNodeList, clus
 		log.Error(err)
 	}
 	// 创建 kubernetes 证书和私钥
-	shell = "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json |  /opt/kubernetes/bin/cfssljson -bare kubernetes"
+	shell := "cd /opt/kubernetes/cfg/ && /opt/kubernetes/bin/cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kubernetes-csr.json |  /opt/kubernetes/bin/cfssljson -bare kubernetes"
 	// log.Info(shell)
 	// if !myTools.ShellOut(shell) {
 	// 	log.Error("创建 kubernetes 证书和私钥失败!!!")

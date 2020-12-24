@@ -202,13 +202,14 @@ func main() {
 	wg.Add(allIPList.Len())
 	for ip := allIPList.Front(); ip != nil; ip = ip.Next() {
 		log.Info(ip.Value.(string))
-		// go k8stools.SendBinFile(ip.Value.(string), password, proxyMode, k8spath, kernel, &wg)
+		// 主要把核心三个文件分发好 cfssl cfssljson hyperkube 在确认还会不会出现Text file busy
+		FileLists := []string{"cfssl", "cfssljson", "hyperkube"}
+		go tools.SendBinAndConfigFile(ip.Value.(string), password, k8spath, "/opt/kubernetes/bin/", FileLists, &wg)
 	}
 	wg.Wait()
-	log.Info("所有主机均已配置完成.")
-	log.Info("判断系统参数配置是否启用...")
 	log.Info("所有文件分发完成请确认")
 	time.Sleep(10 * time.Second)
+	log.Info("判断系统参数配置是否启用...")
 	if system {
 		log.Info("开始配置系统参数...")
 		wg.Add(allIPList.Len())
@@ -249,6 +250,10 @@ func main() {
 			var etcd EtcdJSONParse
 			log.Info("开始安装Etcd服务....")
 			// unzip etcd.tar.gz
+			if !tools.Exists(k8spath + "tools/etcd.tar.gz") {
+				log.Warning("etcd.tar.gz文件不存在，请上传到" + k8spath + "tools/目录下")
+				log.Warning("下载URL : https://github.com/etcd-io/etcd/releases/download/v3.4.14/etcd-v3.4.14-linux-amd64.tar.gz")
+			}
 			shell := "cd " + k8spath + "tools/ && tar -zxf etcd.tar.gz && mv " + k8spath + "tools/etcd-* " + k8spath + "tools/etcd"
 			log.Info("start run " + shell)
 			if !tools.ShellOut(shell) {
@@ -636,7 +641,6 @@ func main() {
 			dashboardOffline := config.Get("other.dashboard.dashboard_offline").(string)
 			metricsscraperImages := config.Get("other.dashboard.metricsscraperImages").(string)
 			metricsscraperOffline := config.Get("other.dashboard.metricsscraper_offline").(string)
-			log.Info("aaaa")
 			// 判断是否需要载入镜像
 			if config.Get("other.dashboard.loadImage").(bool) {
 				// 判断dashboardOffline镜像文件是否存在
