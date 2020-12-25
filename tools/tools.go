@@ -74,25 +74,25 @@ func GetIPDes(ips string) (string, int, int) {
 func CheckCreateWriteFile(filePath, fileName, content string) bool {
 	_, err := os.Stat(filePath)
 	if err != nil {
-		log.Warning(err)
-		log.Warning("start create " + filePath + "...")
+		// log.Warning(err)
+		// log.Warning("start create " + filePath + "...")
 		err := os.MkdirAll(filePath, os.ModePerm)
 		if err != nil {
 			log.Error(err)
 		}
 	}
-	log.Warning("start write " + fileName + "...")
+	// log.Warning("start write " + fileName + "...")
 	f, err3 := os.Create(filePath + fileName) //创建文件
 	if err3 != nil {
 		log.Warning(err3)
 		log.Warning("create file fail," + fileName + "file is exist")
 	}
 	w := bufio.NewWriter(f) //创建新的 Writer 对象
-	n4, err3 := w.WriteString(content)
+	_, err3 = w.WriteString(content)
 	if err3 != nil {
 		log.Warning(err3)
 	}
-	log.Info("写入 " + strconv.Itoa(n4) + " 字节成功.")
+	// log.Info("写入 " + strconv.Itoa(n4) + " 字节成功.")
 	w.Flush()
 	f.Close()
 	return false

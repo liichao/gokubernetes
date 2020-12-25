@@ -27,6 +27,7 @@ func InstallDocker(ip, pwd, k8spath string, ws *sync.WaitGroup) {
 	if err != nil {
 		log.Info(err)
 	}
+	// 上传加载docker 脚本
 	err = c.Upload(k8spath+"docker", "/etc/bash_completion.d/docker")
 	if err != nil {
 		log.Info(err)

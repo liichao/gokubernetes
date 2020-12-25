@@ -181,8 +181,6 @@ other:
     - 将docker更换container
     - 测试1.18和1.19和1.20的k8s安装
     - 后期规划服务网格 一键安装
-    - ipvs 负载均衡master后期在做
-    - 关于masterip这边临时取了第一个masterip为apiserverip
 
 
 ### 注意事项

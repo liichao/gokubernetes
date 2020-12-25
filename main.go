@@ -100,9 +100,6 @@ func main() {
 	yamlFileLists := []string{"read-user-sa-rbac.yaml", "kubernetes-dashboard.yaml", "admin-user-sa-rbac.yaml", "metrics-server.yaml", "coredns.yaml", "kube-flannel-vxlan.yaml", "kube-flannel.yaml", "read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
 	serviceFileLists := []string{"kubelet.service", "kube-proxy.service", "kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
 	toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube", "etcd.tar.gz", "cni-plugins-linux-amd64-v0.9.0.tgz", "flanneld-v0.13.0-amd64.docker", "iptables-1.6.2.tar.bz2"}
-	log.Info(certFileLists)
-	log.Info(yamlFileLists)
-	log.Info(serviceFileLists)
 	log.Info(toolsFileLists)
 	// 将配置文件生成到k8spath目录中
 	log.Info(" 将配置文件生成到" + k8spath + "目录中...")
@@ -644,6 +641,20 @@ func main() {
 				log.Error("创建kubernetes-dashboard!!!")
 			}
 		}
+	}
+	// 将apiServer地址修改成ipvsApiServer地址
+	// 替换俩个服务的配置文件并重启 kubelet.kubeconfig kube-proxy.kubeconfig
+	if config.Get("ipvsApiServer").(bool) {
+		apiServer = apiServer + ":6443"
+		ipvsAPIServer := tools.GetIPString(svcIP) + "1" + ":443"
+		log.Info(apiServer)
+		log.Info(ipvsAPIServer)
+		wg.Add(nodeIPList.Len())
+		for ip := nodeIPList.Front(); ip != nil; ip = ip.Next() {
+			go k8stools.UpdateAPIServerToIpvs(ip.Value.(string), password, apiServer, ipvsAPIServer, &wg)
+		}
+		wg.Wait()
+		log.Info("检查服务")
 	}
 	log.Info("所有程序都安全完成，请执行systemctl status kubelet 如Not using `--random-fully` in the MASQUERADE rule for iptables because the local version of iptables does not support it 报错，请将config.yaml false修改为true 在运行修复一下")
 }

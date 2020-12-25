@@ -23,6 +23,11 @@ node:
   10.10.77.191-196
 apiServer:
   10.10.77.191
+# 是否启用ipvs apiserver高可用。 如果启用 在集群部署完成后，会将 apiServer的ip 替换成 svcIP网段的第一个地址10.249.0.1:443 
+# 从而实现apiserver 高可用 
+# 这个组件也可以后面单独启用的
+ipvsApiServer:
+  true
 password:
   密码
 # 是否启用ipvs，默认启用

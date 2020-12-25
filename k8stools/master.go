@@ -249,3 +249,33 @@ func RemoveK8sMaster(ip, pwd string, ws *sync.WaitGroup) {
 	}
 	log.Info("删除k8s master服务完成.")
 }
+
+// UpdateAPIServerToIpvs 更新服务器
+func UpdateAPIServerToIpvs(ip, pwd, apiServer, ipvsAPIServer string, ws *sync.WaitGroup) {
+	defer ws.Done()
+	c, err := ssh.NewClient(ip, "22", "root", pwd)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	shell := "sed -i 's%" + apiServer + "%" + ipvsAPIServer + "%g' /opt/kubernetes/cfg/kubelet.kubeconfig"
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+	}
+	shell = "sed -i 's%" + apiServer + "%" + ipvsAPIServer + "%g' /opt/kubernetes/cfg/kube-proxy.kubeconfig"
+	log.Info(shell)
+	err = c.Exec(shell)
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl restart kubelet")
+	if err != nil {
+		log.Error(err)
+	}
+	err = c.Exec("systemctl restart kube-proxy")
+	if err != nil {
+		log.Error(err)
+	}
+}
