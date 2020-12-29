@@ -228,6 +228,8 @@ func SendBinAndConfigFile(ip, pwd, sourcePath, descPath string, listFile []strin
 	}
 	// 当命令执行完成后关闭
 	defer c.Close()
+	// 尝试创建目录 忽略所有报错
+	c.MkdirAll(descPath)
 	// 上传，并返回结果
 	// 上传metricsServerImages tar到node的第一台机器
 	for _, file := range listFile {

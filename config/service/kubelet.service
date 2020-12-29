@@ -19,7 +19,7 @@ ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/memory/system.slice
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/pids/system.slice
 ExecStartPre=/bin/mkdir -p /sys/fs/cgroup/systemd/system.slice
 
-ExecStart=/opt/kubernetes/bin/hyperkube kubelet \
+ExecStart=/opt/kubernetes/bin/kubelet \
   --config=/opt/kubernetes/cfg/kubelet-config.yaml \
   --cni-bin-dir=/opt/kubernetes/bin/ \
   --cni-conf-dir=/etc/cni/net.d \

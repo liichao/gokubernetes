@@ -6,7 +6,7 @@ After=network.target
 [Service]
 # kube-proxy 根据 --cluster-cidr 判断集群内部和外部流量，指定 --cluster-cidr 或 --masquerade-all 选项后，kube-proxy 会对访问 Service IP 的请求做 SNAT
 WorkingDirectory=/var/lib/kube-proxy
-ExecStart=/opt/kubernetes/bin/hyperkube kube-proxy \
+ExecStart=/opt/kubernetes/bin/kube-proxy \
   --bind-address=inventory_hostname \
   --cluster-cidr=CLUSTER_CIDR \
   --hostname-override=inventory_hostname \

@@ -46,7 +46,7 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 		log.Error(err)
 	}
 	// 分发文件
-	binFileList := []string{"hyperkube", "cfssl", "cfssljson", "bridge", "host-local", "loopback"}
+	binFileList := []string{"kube-proxy", "kubelet", "kubectl", "cfssl", "cfssljson", "bridge", "host-local", "loopback"}
 	for _, binFile := range binFileList {
 		fileName := binFile[strings.LastIndex(binFile, `/`)+1:]
 		log.Info(fileName)
@@ -90,25 +90,25 @@ func InstallK8sNode(ip, pwd, svcIP, k8spath, apiserver, maxPods, clusterIP, prox
 		log.Error(err)
 	}
 	// 设置集群参数
-	shell = "/opt/kubernetes/bin/hyperkube kubectl config set-cluster kubernetes --certificate-authority=/opt/kubernetes/cfg/cert/ca.pem --embed-certs=true --server=https://" + apiserver + ":6443 --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
+	shell = "/opt/kubernetes/bin/kubectl config set-cluster kubernetes --certificate-authority=/opt/kubernetes/cfg/cert/ca.pem --embed-certs=true --server=https://" + apiserver + ":6443 --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
 	err = c.Exec(shell)
 	if err != nil {
 		log.Error(err)
 	}
 	//设置客户端认证参数
-	shell = "/opt/kubernetes/bin/hyperkube kubectl config set-credentials system:node:" + ip + " --client-certificate=/opt/kubernetes/cfg/cert/kubelet.pem --embed-certs=true --client-key=/opt/kubernetes/cfg/cert/kubelet-key.pem --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
+	shell = "/opt/kubernetes/bin/kubectl config set-credentials system:node:" + ip + " --client-certificate=/opt/kubernetes/cfg/cert/kubelet.pem --embed-certs=true --client-key=/opt/kubernetes/cfg/cert/kubelet-key.pem --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
 	err = c.Exec(shell)
 	if err != nil {
 		log.Error(err)
 	}
 	// 设置上下文参数
-	shell = "/opt/kubernetes/bin/hyperkube kubectl config set-context default --cluster=kubernetes --user=system:node:" + ip + " --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
+	shell = "/opt/kubernetes/bin/kubectl config set-context default --cluster=kubernetes --user=system:node:" + ip + " --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
 	err = c.Exec(shell)
 	if err != nil {
 		log.Error(err)
 	}
 	// 选择默认上下文
-	shell = "/opt/kubernetes/bin/hyperkube kubectl config use-context default --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
+	shell = "/opt/kubernetes/bin/kubectl config use-context default --kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig"
 	err = c.Exec(shell)
 	if err != nil {
 		log.Error(err)

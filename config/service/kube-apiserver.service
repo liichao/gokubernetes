@@ -4,7 +4,7 @@ Documentation=https://github.com/GoogleCloudPlatform/kubernetes
 After=network.target
 
 [Service]
-ExecStart=/opt/kubernetes/bin/hyperkube kube-apiserver \
+ExecStart=/opt/kubernetes/bin/kube-apiserver \
   --advertise-address=inventory_hostname \
   --allow-privileged=true \
   --anonymous-auth=false \

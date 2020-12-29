@@ -99,7 +99,7 @@ func main() {
 	certFileLists := []string{"kubelet-csr.json", "kubernetes-csr.json", "basic-auth.csv", "aggregator-proxy-csr.json", "etcd-csr.json", "admin-csr.json", "ca-config.json", "ca-csr.json", "kube-controller-manager-csr.json", "kube-proxy-csr.json", "kube-scheduler-csr.json", "read-csr.json"}
 	yamlFileLists := []string{"read-user-sa-rbac.yaml", "kubernetes-dashboard.yaml", "admin-user-sa-rbac.yaml", "metrics-server.yaml", "coredns.yaml", "kube-flannel-vxlan.yaml", "kube-flannel.yaml", "read-group-rbac.yaml", "basic-auth-rbac.yaml", "kubelet-config.yaml"}
 	serviceFileLists := []string{"kubelet.service", "kube-proxy.service", "kube-apiserver.service", "kube-scheduler.service", "kube-controller-manager.service", "etcd.service", "docker.service"}
-	toolsFileLists := []string{"cfssl", "cfssljson", "hyperkube", "etcd.tar.gz", "cni-plugins-linux-amd64-v0.9.0.tgz", "flanneld-v0.13.0-amd64.docker", "iptables-1.6.2.tar.bz2"}
+	toolsFileLists := []string{"cfssl", "cfssljson", "kube-apiserver", "kube-controller-manager", "kube-proxy", "kube-scheduler", "kubelet", "kubectl", "etcd.tar.gz", "cni-plugins-linux-amd64-v0.9.0.tgz", "flanneld-v0.13.0-amd64.docker", "iptables-1.6.2.tar.bz2"}
 	log.Info(toolsFileLists)
 	// 将配置文件生成到k8spath目录中
 	log.Info(" 将配置文件生成到" + k8spath + "目录中...")
@@ -147,6 +147,12 @@ func main() {
 	if !tools.ShellOut(shell) {
 		log.Error("替换harborURL失败")
 	}
+	// 给 k8spath目录下文件赋权
+	// 修改docker配置文件，将harbor地址加入到信任地址
+	shell = "chmod u+x " + k8spath + "/*"
+	if !tools.ShellOut(shell) {
+		log.Error("赋权失败...")
+	}
 	// 判断pause镜像文件是否存在
 	if !tools.Exists(k8spath + "tools/" + config.Get("cnitools").(string)) {
 		log.Info(config.Get("cnitools").(string) + "镜像包不存在，请上传到" + k8spath + "tools/目录下")
@@ -161,8 +167,8 @@ func main() {
 	wg.Add(allIPList.Len())
 	for ip := allIPList.Front(); ip != nil; ip = ip.Next() {
 		log.Info(ip.Value.(string))
-		// 主要把核心三个文件分发好 cfssl cfssljson hyperkube 在确认还会不会出现Text file busy
-		FileLists := []string{"cfssl", "cfssljson", "hyperkube"}
+		// 主要把核心三个文件分发好 cfssl cfssljson k8s五大中心组件 在确认还会不会出现Text file busy
+		FileLists := []string{"cfssl", "cfssljson", "kube-apiserver", "kube-controller-manager", "kube-proxy", "kube-scheduler", "kubelet", "kubectl"}
 		go tools.SendBinAndConfigFile(ip.Value.(string), password, k8spath, "/opt/kubernetes/bin/", FileLists, &wg)
 	}
 	wg.Wait()
@@ -340,7 +346,7 @@ func main() {
 			panic(err)
 		}
 		defer c.Close()
-		err = c.Exec("/opt/kubernetes/bin/hyperkube kubectl apply -f /opt/kubernetes/cfg/basic-auth-rbac.yaml")
+		err = c.Exec("/opt/kubernetes/bin/kubectl apply -f /opt/kubernetes/cfg/basic-auth-rbac.yaml")
 		if err != nil {
 			log.Error(err)
 		}
@@ -399,11 +405,11 @@ func main() {
 	if config.Get("network.install").(bool) {
 		log.Info("安装网络插件")
 		// 创建registry secret,在masterList的第一台执行即可或者直接在这台机器执行也可
-		shell := k8spath + "tools/hyperkube kubectl create secret docker-registry myregistrykey --docker-server=" + config.Get("harborUrl").(string) + " --docker-username=" + config.Get("harborUser").(string) + " --docker-password=" + config.Get("harborPwd").(string) + " --docker-email=dzero@dero.com -n kube-system"
+		shell := k8spath + "tools/kubectl create secret docker-registry myregistrykey --docker-server=" + config.Get("harborUrl").(string) + " --docker-username=" + config.Get("harborUser").(string) + " --docker-password=" + config.Get("harborPwd").(string) + " --docker-email=dzero@dero.com -n kube-system"
 		if !tools.ShellOut(shell) {
 			log.Error("创建kube-system registry secret失败!!!")
 		}
-		shell = k8spath + "tools/hyperkube kubectl create secret docker-registry myregistrykey --docker-server=" + config.Get("harborUrl").(string) + " --docker-username=" + config.Get("harborUser").(string) + " --docker-password=" + config.Get("harborPwd").(string) + " --docker-email=dzero@dero.com"
+		shell = k8spath + "tools/kubectl create secret docker-registry myregistrykey --docker-server=" + config.Get("harborUrl").(string) + " --docker-username=" + config.Get("harborUser").(string) + " --docker-password=" + config.Get("harborPwd").(string) + " --docker-email=dzero@dero.com"
 		if !tools.ShellOut(shell) {
 			log.Error("创建registry secret失败!!!")
 		}
@@ -501,7 +507,7 @@ func main() {
 			if !tools.ShellOut(shell) {
 				log.Error("替换flanneld的模式失败!!!")
 			}
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/kube-flannel-vxlan.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/kube-flannel-vxlan.yaml"
 			if !tools.ShellOut(shell) {
 				log.Error("创建 flannled失败!!!")
 			}
@@ -518,7 +524,7 @@ func main() {
 			if !tools.ShellOut(shell) {
 				log.Error("替换flanneld的模式失败!!!")
 			}
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/kube-flannel.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/kube-flannel.yaml"
 			if !tools.ShellOut(shell) {
 				log.Error("创建 flannled失败!!!")
 			}
@@ -558,14 +564,14 @@ func main() {
 				log.Error("替换镜像地址失败!!!")
 			}
 			// 创建CoreDNS
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/coredns.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/coredns.yaml"
 			log.Info("创建CoreDNS " + shell)
 			if !tools.ShellOut(shell) {
 				log.Error("创建CoreDNS!!!")
 			}
 			time.Sleep(time.Second * 10)
 			// 输出创建结果
-			shell = k8spath + "tools/hyperkube kubectl get pod -o wide -n kube-system"
+			shell = k8spath + "tools/kubectl get pod -o wide -n kube-system"
 			log.Info("查看CoreDNS创建状态 " + shell)
 		}
 		// 判断是否安装metricsserver
@@ -587,7 +593,7 @@ func main() {
 				log.Error("替换镜像地址失败!!!")
 			}
 			// 创建metrics-server
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/metrics-server.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/metrics-server.yaml"
 			log.Info("创建metrics-server " + shell)
 			if !tools.ShellOut(shell) {
 				log.Error("创建metrics-server!!!")
@@ -625,17 +631,17 @@ func main() {
 				log.Error("替换镜像地址失败!!!")
 			}
 			// 创建dashborad
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/admin-user-sa-rbac.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/admin-user-sa-rbac.yaml"
 			log.Info("创建admin-user-sa-rbac " + shell)
 			if !tools.ShellOut(shell) {
 				log.Error("创建admin-user-sa-rbac!!!")
 			}
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/read-user-sa-rbac.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/read-user-sa-rbac.yaml"
 			log.Info("创建read-user-sa-rbac " + shell)
 			if !tools.ShellOut(shell) {
 				log.Error("创建read-user-sa-rbac!!!")
 			}
-			shell = k8spath + "tools/hyperkube kubectl apply -f " + k8spath + "yaml/kubernetes-dashboard.yaml"
+			shell = k8spath + "tools/kubectl apply -f " + k8spath + "yaml/kubernetes-dashboard.yaml"
 			log.Info("创建kubernetes-dashboard " + shell)
 			if !tools.ShellOut(shell) {
 				log.Error("创建kubernetes-dashboard!!!")

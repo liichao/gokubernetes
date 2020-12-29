@@ -41,25 +41,25 @@ func CreateCert(k8spath, apiServer string) {
 		log.Error("删除/root/.kube失败或者目录不存在!!")
 	}
 	// 设置集群参数admin
-	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/hyperkube kubectl config set-cluster " + clusterName + " --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer
+	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/kubectl config set-cluster " + clusterName + " --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer
 	log.Info("start run " + shell)
 	if !myTools.ShellOut(shell) {
-		log.Error("检查路径与hyperkube文件是否存在!!!")
+		log.Error("检查路径与kubectl文件是否存在!!!")
 	}
 	// 设置客户端认证参数admin
-	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/hyperkube kubectl config set-credentials " + userName + " --client-certificate=" + k8spath + "cert/" + userName + ".pem --embed-certs=true --client-key=" + k8spath + "cert/" + userName + "-key.pem"
+	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/kubectl config set-credentials " + userName + " --client-certificate=" + k8spath + "cert/" + userName + ".pem --embed-certs=true --client-key=" + k8spath + "cert/" + userName + "-key.pem"
 	log.Info("start run " + shell)
 	if !myTools.ShellOut(shell) {
 		log.Error("del faild or config file not exist!!!")
 	}
 	// 设置上下文参数admin
-	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/hyperkube kubectl config set-context " + contextName + " --cluster=" + clusterName + " --user=" + userName
+	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/kubectl config set-context " + contextName + " --cluster=" + clusterName + " --user=" + userName
 	log.Info("start run " + shell)
 	if !myTools.ShellOut(shell) {
 		log.Error("del faild or config file not exist!!!")
 	}
 	// 选择默认上下文admin
-	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/hyperkube kubectl config set-context " + contextName
+	shell = "cd " + k8spath + "cert/ && " + k8spath + "tools/kubectl config set-context " + contextName
 	log.Info("start run " + shell)
 	if !myTools.ShellOut(shell) {
 		log.Error("del faild or config file not exist!!!")
@@ -72,22 +72,22 @@ func CreateCert(k8spath, apiServer string) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置集群参数kube-scheduler
-	shell = k8spath + "tools/hyperkube kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置认证参数kube-scheduler
-	shell = k8spath + "tools/hyperkube kubectl config set-credentials system:kube-scheduler --client-certificate=" + k8spath + "cert/kube-scheduler.pem --client-key=" + k8spath + "cert/kube-scheduler-key.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-credentials system:kube-scheduler --client-certificate=" + k8spath + "cert/kube-scheduler.pem --client-key=" + k8spath + "cert/kube-scheduler-key.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置上下文参数kube-scheduler
-	shell = k8spath + "tools/hyperkube kubectl config set-context default --cluster=kubernetes --user=system:kube-scheduler --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-context default --cluster=kubernetes --user=system:kube-scheduler --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 选择默认上下文kube-scheduler
-	shell = k8spath + "tools/hyperkube kubectl config use-context default --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
+	shell = k8spath + "tools/kubectl config use-context default --kubeconfig=" + k8spath + "cert/kube-scheduler.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
@@ -98,22 +98,22 @@ func CreateCert(k8spath, apiServer string) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置集群参数kube-proxy
-	shell = k8spath + "tools/hyperkube kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置客户端认证参数kube-proxy
-	shell = k8spath + "tools/hyperkube kubectl config set-credentials kube-proxy --client-certificate=" + k8spath + "cert/kube-proxy.pem --client-key=" + k8spath + "cert/kube-proxy-key.pem --embed-certs=true --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-credentials kube-proxy --client-certificate=" + k8spath + "cert/kube-proxy.pem --client-key=" + k8spath + "cert/kube-proxy-key.pem --embed-certs=true --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置上下文参数kube-proxy
-	shell = k8spath + "tools/hyperkube kubectl config set-context default --cluster=kubernetes --user=kube-proxy --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-context default --cluster=kubernetes --user=kube-proxy --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 选择默认上下文kube-proxy
-	shell = k8spath + "tools/hyperkube kubectl config use-context default --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
+	shell = k8spath + "tools/kubectl config use-context default --kubeconfig=" + k8spath + "cert/kube-proxy.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
@@ -123,22 +123,22 @@ func CreateCert(k8spath, apiServer string) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置集群参数kube-controller-manager
-	shell = k8spath + "tools/hyperkube kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-cluster kubernetes --certificate-authority=" + k8spath + "cert/ca.pem --embed-certs=true --server=" + kubeAPIServer + " --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置认证参数kube-controller-manager
-	shell = k8spath + "tools/hyperkube kubectl config set-credentials system:kube-controller-manager --client-certificate=" + k8spath + "cert/kube-controller-manager.pem --client-key=" + k8spath + "cert/kube-controller-manager-key.pem --embed-certs=true --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-credentials system:kube-controller-manager --client-certificate=" + k8spath + "cert/kube-controller-manager.pem --client-key=" + k8spath + "cert/kube-controller-manager-key.pem --embed-certs=true --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 设置上下文参数kube-controller-manager
-	shell = k8spath + "tools/hyperkube kubectl config set-context default --cluster=kubernetes --user=system:kube-controller-manager --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
+	shell = k8spath + "tools/kubectl config set-context default --cluster=kubernetes --user=system:kube-controller-manager --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}
 	// 选择默认上下文kube-controller-manager
-	shell = k8spath + "tools/hyperkube kubectl config use-context default --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
+	shell = k8spath + "tools/kubectl config use-context default --kubeconfig=" + k8spath + "cert/kube-controller-manager.kubeconfig"
 	if !myTools.ShellOut(shell) {
 		log.Error("create admin cert private key faild!!!")
 	}

@@ -6,6 +6,12 @@ Makefile
 config/tools/cfssl
 config/tools/cfssljson
 config/tools/hyperkube
+config/tools/kube-apiserver
+config/tools/kube-controller-manager
+config/tools/kube-proxy
+config/tools/kube-scheduler
+config/tools/kubelet
+config/tools/kubectl
 config/tools/etcd.tar.gz
 config/tools/docker-18.09.6.tgz
 config/tools/cni-plugins-linux-amd64-v0.9.0.tgz
